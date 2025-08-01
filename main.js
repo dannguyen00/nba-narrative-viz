@@ -1,3 +1,184 @@
+// Helper functions for common plotting logic
+function createTooltip() {
+  return d3.select('#viz').append('div')
+    .attr('class', 'tooltip')
+    .style('position', 'absolute')
+    .style('background', '#fff')
+    .style('border', '1px solid #ccc')
+    .style('padding', '8px 12px')
+    .style('border-radius', '4px')
+    .style('pointer-events', 'none')
+    .style('opacity', 0)
+    .style('box-shadow', '0 2px 8px rgba(0,0,0,0.1)')
+    .style('font-size', '12px');
+}
+
+function createLineGenerator(x, y) {
+  return d3.line()
+    .x(d => x(d.year))
+    .y(d => y(d.value))
+    .curve(d3.curveMonotoneX); // Smooth curve
+}
+
+function animateLine(path, duration = 1000) {
+  const totalLength = path.node().getTotalLength();
+  path
+    .attr('stroke-dasharray', totalLength + ' ' + totalLength)
+    .attr('stroke-dashoffset', totalLength)
+    .transition()
+    .duration(duration)
+    .ease(d3.easeLinear)
+    .attr('stroke-dashoffset', 0);
+}
+
+function createInteractiveCircle(svg, data, x, y, color, radius = 4, tooltip, valueKey = 'value', className = 'interactive-circle') {
+  return svg.selectAll(`circle.${className}`)
+    .data(data)
+    .enter().append('circle')
+    .attr('class', className)
+    .attr('cx', d => x(d.year))
+    .attr('cy', d => y(d[valueKey]))
+    .attr('r', radius)
+    .attr('fill', color)
+    .style('cursor', 'pointer')
+    .style('transition', 'r 0.2s ease')
+    .on('mouseover', function(event, d) {
+      d3.select(this)
+        .transition()
+        .duration(200)
+        .attr('r', radius * 1.5);
+      
+      tooltip.transition()
+        .duration(200)
+        .style('opacity', 1);
+      
+      tooltip.html(tooltip.content(d))
+        .style('left', (event.pageX + 10) + 'px')
+        .style('top', (event.pageY - 28) + 'px');
+    })
+    .on('mousemove', function(event) {
+      tooltip.style('left', (event.pageX + 10) + 'px')
+             .style('top', (event.pageY - 28) + 'px');
+    })
+    .on('mouseout', function() {
+      d3.select(this)
+        .transition()
+        .duration(200)
+        .attr('r', radius);
+      
+      tooltip.transition()
+        .duration(200)
+        .style('opacity', 0);
+    });
+}
+
+function createAxisWithTransitions(svg, x, y, width, height, margin) {
+  // X axis with transition
+  const xAxis = svg.append('g')
+    .attr('transform', `translate(0,${height})`)
+    .style('opacity', 0);
+  
+  xAxis.transition()
+    .duration(500)
+    .style('opacity', 1);
+  
+  // Y axis with transition
+  const yAxis = svg.append('g')
+    .style('opacity', 0);
+  
+  yAxis.transition()
+    .duration(500)
+    .delay(200)
+    .style('opacity', 1);
+  
+  return { xAxis, yAxis };
+}
+
+function createLegend(svg, legendData, plotWidth, margin) {
+  const legend = svg.append('g')
+    .attr('transform', `translate(${plotWidth + margin.right}, 10)`)
+    .style('opacity', 0);
+  
+  legend.transition()
+    .duration(500)
+    .delay(400)
+    .style('opacity', 1);
+  
+  legendData.forEach((item, i) => {
+    const legendItem = legend.append('g')
+      .attr('transform', `translate(0, ${i * 24})`);
+    
+    // Line
+    legendItem.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
+      .attr('stroke', item.color)
+      .attr('stroke-width', item.strokeWidth || 3)
+      .style('stroke-dasharray', item.dashArray || 'none');
+    
+    // Text
+    legendItem.append('text')
+      .attr('x', 36).attr('y', 4)
+      .text(item.label)
+      .attr('fill', '#333')
+      .attr('font-size', '1em');
+  });
+  
+  // Legend title
+  legend.append('text')
+    .attr('x', 0).attr('y', -10)
+    .text('Legend:')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#333');
+}
+
+function createAnnotation(svg, x, y, text, color = '#1976d2', opacity = 0.08) {
+  return svg.append('rect')
+    .attr('x', x.start)
+    .attr('y', 0)
+    .attr('width', x.end - x.start)
+    .attr('height', y)
+    .attr('fill', color)
+    .attr('opacity', 0)
+    .transition()
+    .duration(800)
+    .delay(600)
+    .attr('opacity', opacity);
+}
+
+function createAnnotationText(svg, x, y, text, color = '#1976d2') {
+  return svg.append('text')
+    .attr('x', x)
+    .attr('y', y)
+    .attr('text-anchor', 'middle')
+    .attr('fill', color)
+    .attr('font-size', '1em')
+    .attr('font-weight', 'bold')
+    .style('opacity', 0)
+    .text(text)
+    .transition()
+    .duration(800)
+    .delay(800)
+    .style('opacity', 1);
+}
+
+// Scene transition helper
+function transitionToScene(newScene) {
+  d3.select('#viz')
+    .transition()
+    .duration(300)
+    .style('opacity', 0)
+    .end()
+    .then(() => {
+      d3.select('#viz').html('');
+      d3.select('#annotation').html('');
+      newScene();
+      d3.select('#viz')
+        .transition()
+        .duration(300)
+        .style('opacity', 1);
+    });
+}
+
 let currentScene = 0;
 const scenes = [showScene1, showScene2, showScene3, showScene4, showScene5, showScene6];
 
@@ -10,13 +191,16 @@ function updateProgress() {
 function nextScene() {
   if (currentScene < scenes.length - 1) {
     currentScene++;
-    renderScene();
+    transitionToScene(scenes[currentScene]);
+    updateProgress();
   }
 }
+
 function prevScene() {
   if (currentScene > 0) {
     currentScene--;
-    renderScene();
+    transitionToScene(scenes[currentScene]);
+    updateProgress();
   }
 }
 
@@ -43,10 +227,8 @@ function showScene1() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // console.log('Loaded data:', data.slice(0, 5));
     // Filter for 1979-80 onward and valid 3PA
     const filtered = data.filter(d => {
-      // d.Season is a string like "2024-25"
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
       d.year = year;
@@ -54,82 +236,74 @@ function showScene1() {
       d['3P%'] = d['3P%'] ? +d['3P%'] : null;
       return year >= 1980 && d['3PA'] != null && d['3PA'] !== '';
     });
-    // console.log('Filtered data:', filtered);
 
     // X and Y scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, width]);
+    
     const y = d3.scaleLinear()
       .domain([0, d3.max(filtered, d => d['3PA']) * 1.1])
       .range([height, 0]);
 
-    // X axis
-    svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x).tickFormat(d3.format('d')));
+    // Create axes with transitions
+    const { xAxis, yAxis } = createAxisWithTransitions(svg, x, y, width, height, margin);
+    
+    xAxis.call(d3.axisBottom(x).tickFormat(d3.format('d')));
+    yAxis.call(d3.axisLeft(y));
+
+    // Axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('Season');
+      .style('opacity', 0)
+      .text('Season')
+      .transition()
+      .duration(500)
+      .delay(300)
+      .style('opacity', 1);
 
-    // Y axis
-    svg.append('g')
-      .call(d3.axisLeft(y));
     svg.append('text')
       .attr('transform', 'rotate(-90)')
       .attr('x', -height/2)
       .attr('y', -margin.left + 18)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3PA per Game');
+      .style('opacity', 0)
+      .text('3PA per Game')
+      .transition()
+      .duration(500)
+      .delay(300)
+      .style('opacity', 1);
 
-    // Line
-    const line = d3.line()
-      .x(d => x(d.year))
-      .y(d => y(d['3PA']));
-    svg.append('path')
-      .datum(filtered)
+    // Prepare data for line
+    const lineData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
+
+    // Create line with animation
+    const line = createLineGenerator(x, y);
+    const path = svg.append('path')
+      .datum(lineData)
       .attr('fill', 'none')
       .attr('stroke', '#1976d2')
       .attr('stroke-width', 2.5)
       .attr('d', line);
 
-    // Tooltip
-    const tooltip = d3.select('#viz').append('div')
-      .attr('class', 'tooltip')
-      .style('position', 'absolute')
-      .style('background', '#fff')
-      .style('border', '1px solid #ccc')
-      .style('padding', '8px 12px')
-      .style('border-radius', '4px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0);
+    // Animate the line
+    animateLine(path, 1500);
 
-    svg.selectAll('circle')
-      .data(filtered)
-      .enter().append('circle')
-      .attr('cx', d => x(d.year))
-      .attr('cy', d => y(d['3PA']))
-      .attr('r', 4)
-      .attr('fill', '#ffb300')
-      .on('mouseover', function(event, d) {
-        tooltip.transition().duration(100).style('opacity', 1);
-        tooltip.html(`<strong>${d.Season}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${d['3P%'] ? (d['3P%']*100).toFixed(1)+'%' : 'N/A'}`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mousemove', function(event) {
-        tooltip.style('left', (event.pageX + 10) + 'px')
-               .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mouseout', function() {
-        tooltip.transition().duration(200).style('opacity', 0);
-      });
+    // Create tooltip
+    const tooltip = createTooltip();
+    tooltip.content = (d) => {
+      const originalData = filtered.find(item => item.year === d.year);
+      return `<strong>${originalData.Season}</strong><br>3PA: ${originalData['3PA'].toFixed(1)}<br>3P%: ${originalData['3P%'] ? (originalData['3P%']*100).toFixed(1)+'%' : 'N/A'}`;
+    };
 
-    // Annotation: 1979-80 intro, 1994-97 short, 2015+ boom
+    // Create interactive circles
+    createInteractiveCircle(svg, lineData, x, y, '#ffb300', 4, tooltip, 'value', 'scene1-circles');
+
+    // Annotations with transitions
     const annotations = [
       {
         note: { label: '3-point line introduced', align: 'middle' },
@@ -147,22 +321,34 @@ function showScene1() {
         dy: -50, dx: 60
       }
     ].filter(a => a.data);
-    const makeAnnotations = d3.annotation()
-      .type(d3.annotationLabel)
-      .accessors({
-        x: d => x(d.year),
-        y: d => y(d['3PA'])
-      })
-      .annotations(annotations.map(a => ({
-        note: a.note,
-        x: x(a.data.year),
-        y: y(a.data['3PA']),
-        dx: a.dx,
-        dy: a.dy
-      })));
-    svg.append('g').call(makeAnnotations);
 
-    // Title
+    // Add annotations with delays
+    annotations.forEach((annotation, i) => {
+      setTimeout(() => {
+        const makeAnnotations = d3.annotation()
+          .type(d3.annotationLabel)
+          .accessors({
+            x: d => x(d.year),
+            y: d => y(d['3PA'])
+          })
+          .annotations([{
+            note: annotation.note,
+            x: x(annotation.data.year),
+            y: y(annotation.data['3PA']),
+            dx: annotation.dx,
+            dy: annotation.dy
+          }]);
+        
+        svg.append('g')
+          .style('opacity', 0)
+          .call(makeAnnotations)
+          .transition()
+          .duration(500)
+          .style('opacity', 1);
+      }, 1000 + (i * 300));
+    });
+
+    // Title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -170,12 +356,22 @@ function showScene1() {
       .attr('font-size', '1.3em')
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
-      .text('NBA League Average 3-Point Attempts per Game (1980–Present)');
+      .style('opacity', 0)
+      .text('NBA League Average 3-Point Attempts per Game (1980–Present)')
+      .transition()
+      .duration(500)
+      .delay(100)
+      .style('opacity', 1);
   });
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('The NBA introduced the 3-point line in 1979-80. Since then, 3-point attempts have steadily increased, with major jumps in the mid-1990s and the 2010s. Hover over points for details.');
+    .style('opacity', 0)
+    .html('The NBA introduced the 3-point line in 1979-80. Since then, 3-point attempts have steadily increased, with major jumps in the mid-1990s and the 2010s. Hover over points for details.')
+    .transition()
+    .duration(500)
+    .delay(800)
+    .style('opacity', 1);
 }
 function showScene2() {
   const plotWidth = 760;
@@ -202,210 +398,158 @@ function showScene2() {
       return year >= 1990 && year <= 2000 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
     });
 
-    // X scale
+    // Scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, plotWidth]);
-    // Y scale for attempts
+    
     const yLeft = d3.scaleLinear()
       .domain([0, d3.max(filtered, d => Math.max(d['3PA'], d['2PA'])) * 1.1])
       .range([height, 0]);
-    // Y scale for 3P%
+    
     const yRight = d3.scaleLinear()
       .domain([0, d3.max(filtered, d => d['3P%']) * 1.15])
       .range([height, 0]);
 
-    // X axis
+    // Create axes with transitions
+    const { xAxis, yAxis } = createAxisWithTransitions(svg, x, yLeft, width, height, margin);
+    
+    xAxis.call(d3.axisBottom(x).tickValues([1990, 1992, 1994, 1996, 1998, 2000]).tickFormat(d3.format('d')));
+    yAxis.call(d3.axisLeft(yLeft));
+
+    // Right Y axis
     svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x).tickValues([1990, 1992, 1994, 1996, 1998, 2000]).tickFormat(d3.format('d')));
+      .attr('transform', `translate(${width},0)`)
+      .style('opacity', 0)
+      .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')))
+      .transition()
+      .duration(500)
+      .delay(300)
+      .style('opacity', 1);
+
+    // Axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('Season');
+      .style('opacity', 0)
+      .text('Season')
+      .transition()
+      .duration(500)
+      .delay(400)
+      .style('opacity', 1);
 
-    // Y axis left
-    svg.append('g')
-      .call(d3.axisLeft(yLeft));
     svg.append('text')
       .attr('transform', 'rotate(-90)')
       .attr('x', -height/2)
       .attr('y', -margin.left + 18)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('Attempts per Game (Left Axis)');
+      .style('opacity', 0)
+      .text('Attempts per Game (Left Axis)')
+      .transition()
+      .duration(500)
+      .delay(400)
+      .style('opacity', 1);
 
-    // Y axis right
-    svg.append('g')
-      .attr('transform', `translate(${width},0)`)
-      .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
     svg.append('text')
       .attr('transform', 'rotate(-90)')
       .attr('x', -height/2)
       .attr('y', width + margin.right - 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3P% (Right Axis)');
+      .style('opacity', 0)
+      .text('3P% (Right Axis)')
+      .transition()
+      .duration(500)
+      .delay(400)
+      .style('opacity', 1);
 
-    // Line generators
-    const line3PA = d3.line()
-      .x(d => x(d.year))
-      .y(d => yLeft(d['3PA']));
-    const line2PA = d3.line()
-      .x(d => x(d.year))
-      .y(d => yLeft(d['2PA']));
-    const line3Ppct = d3.line()
-      .x(d => x(d.year))
-      .y(d => yRight(d['3P%']));
+    // Prepare data for lines
+    const line3PAData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
+    const line2PAData = filtered.map(d => ({ year: d.year, value: d['2PA'] }));
+    const line3PpctData = filtered.map(d => ({ year: d.year, value: d['3P%'] }));
 
-    // Draw lines
-    svg.append('path')
-      .datum(filtered)
+    // Create lines with animations
+    const line3PA = createLineGenerator(x, yLeft);
+    const line2PA = createLineGenerator(x, yLeft);
+    const line3Ppct = createLineGenerator(x, yRight);
+
+    // Draw lines with staggered animations
+    const path3PA = svg.append('path')
+      .datum(line3PAData)
       .attr('fill', 'none')
       .attr('stroke', '#1976d2')
       .attr('stroke-width', 2.5)
       .attr('d', line3PA);
-    svg.append('path')
-      .datum(filtered)
+
+    const path2PA = svg.append('path')
+      .datum(line2PAData)
       .attr('fill', 'none')
       .attr('stroke', '#43a047')
       .attr('stroke-width', 2.5)
       .attr('d', line2PA);
-    svg.append('path')
-      .datum(filtered)
+
+    const path3Ppct = svg.append('path')
+      .datum(line3PpctData)
       .attr('fill', 'none')
       .attr('stroke', '#ffb300')
       .attr('stroke-width', 2.5)
       .style('stroke-dasharray', '5 3')
       .attr('d', line3Ppct);
 
-    // Annotation for 1994-1997 (line shortened) - moved before tooltip circles
-    svg.append('rect')
-      .attr('x', x(1994))
-      .attr('y', 0)
-      .attr('width', x(1997) - x(1994))
-      .attr('height', height)
-      .attr('fill', '#ffb300')
-      .attr('opacity', 0.08);
-    svg.append('text')
-      .attr('x', x(1994) + (x(1997) - x(1994))/2)
-      .attr('y', 30)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#ffb300')
-      .attr('font-size', '1em')
-      .attr('font-weight', 'bold')
-      .text('3PT Line Shortened');
+    // Animate lines with delays
+    setTimeout(() => animateLine(path3PA, 1000), 500);
+    setTimeout(() => animateLine(path2PA, 1000), 1000);
+    setTimeout(() => animateLine(path3Ppct, 1000), 1500);
 
-    // Tooltip
-    const tooltip = d3.select('#viz').append('div')
-      .attr('class', 'tooltip')
-      .style('position', 'absolute')
-      .style('background', '#fff')
-      .style('border', '1px solid #ccc')
-      .style('padding', '8px 12px')
-      .style('border-radius', '4px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0);
+    // Create annotation with transition
+    createAnnotation(svg, { start: x(1994), end: x(1997) }, height, '3PT Line Shortened', '#ffb300');
+    createAnnotationText(svg, x(1994) + (x(1997) - x(1994))/2, 30, '3PT Line Shortened', '#ffb300');
 
-    // Circles for tooltips (3PA)
-    svg.selectAll('circle.pa3')
-      .data(filtered)
-      .enter().append('circle')
-      .attr('class', 'pa3')
-      .attr('cx', d => x(d.year))
-      .attr('cy', d => yLeft(d['3PA']))
-      .attr('r', 4)
-      .attr('fill', '#1976d2')
-      .on('mouseover', function(event, d) {
-        tooltip.transition().duration(100).style('opacity', 1);
-        tooltip.html(`<strong>${d.Season}</strong><br>3PA: ${d['3PA'].toFixed(1)}`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mousemove', function(event) {
-        tooltip.style('left', (event.pageX + 10) + 'px')
-               .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mouseout', function() {
-        tooltip.transition().duration(200).style('opacity', 0);
-      });
-    // Circles for tooltips (2PA)
-    svg.selectAll('circle.pa2')
-      .data(filtered)
-      .enter().append('circle')
-      .attr('class', 'pa2')
-      .attr('cx', d => x(d.year))
-      .attr('cy', d => yLeft(d['2PA']))
-      .attr('r', 4)
-      .attr('fill', '#43a047')
-      .on('mouseover', function(event, d) {
-        tooltip.transition().duration(100).style('opacity', 1);
-        tooltip.html(`<strong>${d.Season}</strong><br>2PA: ${d['2PA'].toFixed(1)}`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mousemove', function(event) {
-        tooltip.style('left', (event.pageX + 10) + 'px')
-               .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mouseout', function() {
-        tooltip.transition().duration(200).style('opacity', 0);
-      });
-    // Circles for tooltips (3P%)
-    svg.selectAll('circle.pct3')
-      .data(filtered)
-      .enter().append('circle')
-      .attr('class', 'pct3')
-      .attr('cx', d => x(d.year))
-      .attr('cy', d => yRight(d['3P%']))
-      .attr('r', 4)
-      .attr('fill', '#ffb300')
-      .on('mouseover', function(event, d) {
-        tooltip.transition().duration(100).style('opacity', 1);
-        tooltip.html(`<strong>${d.Season}</strong><br>3P%: ${(d['3P%']*100).toFixed(1)}%`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mousemove', function(event) {
-        tooltip.style('left', (event.pageX + 10) + 'px')
-               .style('top', (event.pageY - 28) + 'px');
-      })
-      .on('mouseout', function() {
-        tooltip.transition().duration(200).style('opacity', 0);
-      });
+    // Create tooltip
+    const tooltip = createTooltip();
+    tooltip.content = (d) => `<strong>${d.Season || d.year}</strong><br>3PA: ${d['3PA'] || d.value.toFixed(1)}`;
 
-    // Legend (with lines)
-    const legend = svg.append('g')
-      .attr('transform', `translate(${plotWidth + 60}, 10)`);
-    // 3PA
-    legend.append('line')
-      .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
-      .attr('stroke', '#1976d2').attr('stroke-width', 3);
-    legend.append('text')
-      .attr('x', 36).attr('y', 4)
-      .text('3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // 2PA
-    legend.append('line')
-      .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
-      .attr('stroke', '#43a047').attr('stroke-width', 3);
-    legend.append('text')
-      .attr('x', 36).attr('y', 28)
-      .text('2PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // 3P%
-    legend.append('line')
-      .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
-      .attr('stroke', '#ffb300').attr('stroke-width', 3)
-      .style('stroke-dasharray', '5 3');
-    legend.append('text')
-      .attr('x', 36).attr('y', 52)
-      .text('3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
-    legend.append('text')
-      .attr('x', 0).attr('y', -10)
-      .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
+    // Create interactive circles with different colors and proper tooltips
+    setTimeout(() => {
+      const tooltip3PA = createTooltip();
+      tooltip3PA.content = (d) => {
+        const originalData = filtered.find(item => item.year === d.year);
+        return `<strong>${originalData.Season}</strong><br>3PA: ${originalData['3PA'].toFixed(1)}`;
+      };
+      createInteractiveCircle(svg, line3PAData, x, yLeft, '#1976d2', 5, tooltip3PA, 'value', 'scene2-3pa-circles');
+    }, 1000); // Reduced delay
+    
+    setTimeout(() => {
+      const tooltip2PA = createTooltip();
+      tooltip2PA.content = (d) => {
+        const originalData = filtered.find(item => item.year === d.year);
+        return `<strong>${originalData.Season}</strong><br>2PA: ${originalData['2PA'].toFixed(1)}`;
+      };
+      createInteractiveCircle(svg, line2PAData, x, yLeft, '#43a047', 5, tooltip2PA, 'value', 'scene2-2pa-circles');
+    }, 1100); // Reduced delay
+    
+    setTimeout(() => {
+      const tooltip3Ppct = createTooltip();
+      tooltip3Ppct.content = (d) => {
+        const originalData = filtered.find(item => item.year === d.year);
+        return `<strong>${originalData.Season}</strong><br>3P%: ${(originalData['3P%']*100).toFixed(1)}%`;
+      };
+      createInteractiveCircle(svg, line3PpctData, x, yRight, '#ffb300', 5, tooltip3Ppct, 'value', 'scene2-3ppct-circles');
+    }, 1200); // Reduced delay
 
-    // Title
+    // Create legend with transitions
+    const legendData = [
+      { color: '#1976d2', label: '3PA (Left Axis)' },
+      { color: '#43a047', label: '2PA (Left Axis)' },
+      { color: '#ffb300', label: '3P% (Right Axis)', dashArray: '5 3' }
+    ];
+
+    setTimeout(() => createLegend(svg, legendData, plotWidth, margin), 3500);
+
+    // Title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -413,12 +557,22 @@ function showScene2() {
       .attr('font-size', '1.3em')
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
-      .text('NBA 3PA, 2PA, and 3P% (1990–2000)');
+      .style('opacity', 0)
+      .text('NBA 3PA, 2PA, and 3P% (1990–2000)')
+      .transition()
+      .duration(500)
+      .delay(100)
+      .style('opacity', 1);
   });
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('From 1994–1997, the NBA shortened the 3-point line to encourage more attempts. This chart compares 3PA, 2PA, and 3P% during the 1990s. Hover over points for details.');
+    .style('opacity', 0)
+    .html('From 1994–1997, the NBA shortened the 3-point line to encourage more attempts. This chart compares 3PA, 2PA, and 3P% during the 1990s. Hover over points for details.')
+    .transition()
+    .duration(500)
+    .delay(800)
+    .style('opacity', 1);
 }
 function showScene3() {
   const plotWidth = 760;
