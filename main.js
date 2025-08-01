@@ -469,7 +469,10 @@ function showScene3() {
       .range([height, 0]);
     // Y scale for 3P%
     const yRight = d3.scaleLinear()
-      .domain([0, d3.max(suns, d => d['3P%']) * 1.15])
+      .domain([
+        d3.min(suns, d => d['3P%']) * 0.95, // Start at 95% of min value
+        d3.max(suns, d => d['3P%']) * 1.05  // End at 105% of max value
+      ])
       .range([height, 0]);
 
     // X axis
@@ -1305,9 +1308,9 @@ function showScene5() {
     .html('The 2020s have seen an unprecedented 3-point boom. Teams now shoot more 3-pointers than 2-pointers, with the 3PA ratio exceeding 50% of all field goal attempts. This era represents true "positionless basketball" where even centers and power forwards are expected to shoot threes. The efficiency (3P%) has remained high despite the increased volume.');
 }
 function showScene6() {
-  const margin = {top: 20, right: 20, bottom: 40, left: 60};
+  const margin = {top: 20, right: 20, bottom: 80, left: 60}; // Increased bottom margin
   const width = 900 - margin.left - margin.right;
-  const height = 300 - margin.top - margin.bottom;
+  const height = 400 - margin.top - margin.bottom; // Increased height
 
   // Create main container for the dashboard
   const dashboard = d3.select('#viz')
@@ -1403,8 +1406,9 @@ function showScene6() {
     function updateTeamTable(sortBy = '3PA') {
       console.log('Updating team table sorted by:', sortBy);
       
-      // Clear existing table
+      // Clear existing table and annotation
       panel2.selectAll('table').remove();
+      panel2.selectAll('.team-filter-note').remove();
 
       // Filter teams based on sort criteria
       let filteredTeams = teamDataFiltered;
@@ -1444,7 +1448,7 @@ function showScene6() {
       // Header
       teamTable.append('thead').append('tr')
         .selectAll('th')
-        .data(['Year', 'Team', '3PA', '3P%'])
+        .data(['Year', 'Team', '3PA', '3P%', '3PM'])
         .enter().append('th')
         .text(d => d)
         .style('padding', '8px')
@@ -1462,6 +1466,7 @@ function showScene6() {
             team: team.Team,
             '3PA': team['3PA'],
             '3P%': team['3P%'],
+            '3PM': team['3PM'],
             rank: i + 1
           });
         });
@@ -1470,19 +1475,39 @@ function showScene6() {
       const teamTableRows = teamTbody.selectAll('tr')
         .data(teamRows)
         .enter().append('tr')
-        .style('background', (d, i) => i % 2 === 0 ? '#f8f9fa' : 'white');
+        .style('background', (d, i) => {
+          // Check if this is the first row of a new year
+          if (i === 0 || teamRows[i-1].year !== d.year) {
+            return '#e3f2fd'; // Light blue background for year headers
+          }
+          return i % 2 === 0 ? '#f8f9fa' : 'white';
+        })
+        .style('border-top', (d, i) => {
+          // Add bold line between years
+          if (i === 0 || teamRows[i-1].year !== d.year) {
+            return '2px solid #1976d2';
+          }
+          return 'none';
+        });
 
       teamTableRows.selectAll('td')
         .data(d => [
           d.year,
           d.team,
           d['3PA'].toFixed(1),
-          (d['3P%'] * 100).toFixed(1) + '%'
+          (d['3P%'] * 100).toFixed(1) + '%',
+          d['3PM'].toFixed(1)
         ])
         .enter().append('td')
         .text(d => d)
         .style('padding', '6px 8px')
-        .style('border-bottom', '1px solid #dee2e6');
+        .style('border-bottom', '1px solid #dee2e6')
+        .style('font-weight', (d, i, nodes) => {
+          // Make year column bold for first row of each year
+          const rowIndex = Math.floor(i / 5); // 5 teams per year
+          const isFirstInYear = i % 5 === 0;
+          return isFirstInYear ? 'bold' : 'normal';
+        });
     }
 
     // Initial team table
@@ -1845,7 +1870,12 @@ function showScene6() {
         .padding(0.1);
 
       const y = d3.scaleLinear()
-        .domain([0, d3.max(yearData, d => d[sortBy]) * 1.1])
+        .domain([
+          sortBy === '3P%' 
+            ? d3.min(yearData, d => d[sortBy]) * 0.95  // Start at 95% of min for 3P%
+            : 0,  // Start at 0 for 3PA and 3PM
+          d3.max(yearData, d => d[sortBy]) * 1.05
+        ])
         .range([height, 0]);
 
       // X axis
@@ -1856,11 +1886,19 @@ function showScene6() {
         .style('text-anchor', 'end')
         .attr('dx', '-.8em')
         .attr('dy', '.15em')
-        .attr('transform', 'rotate(-45)');
+        .attr('transform', 'rotate(-45)')
+        .style('font-size', '10px'); // Smaller font size
 
       // Y axis
       svg.append('g')
         .call(d3.axisLeft(y));
+
+      // For 3P%, use percentage format
+      if (sortBy === '3P%') {
+        svg.append('g')
+          .attr('transform', `translate(${width},0)`)
+          .call(d3.axisRight(y).tickFormat(d3.format('.0%')));
+      }
 
       // Bars
       svg.selectAll('rect')
@@ -1874,7 +1912,7 @@ function showScene6() {
         .style('opacity', 0.8)
         .on('mouseover', function(event, d) {
           d3.select(this).style('opacity', 1);
-          showTooltip(event, d);
+          showTooltip(event, d, sortBy);
         })
         .on('mouseout', function() {
           d3.select(this).style('opacity', 0.8);
@@ -1918,9 +1956,17 @@ function showScene6() {
       .style('opacity', 0)
       .style('z-index', '1000');
 
-    function showTooltip(event, d) {
+    function showTooltip(event, d, sortBy) {
       tooltip.transition().duration(200).style('opacity', 1);
-      tooltip.html(`<strong>${d.Team}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${(d['3P%'] * 100).toFixed(1)}%`)
+      let tooltipContent;
+      if (sortBy === '3P%') {
+        tooltipContent = `<strong>${d.Team}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${(d['3P%'] * 100).toFixed(1)}%`;
+      } else if (sortBy === '3PM') {
+        tooltipContent = `<strong>${d.Team}</strong><br>3PM: ${d['3PM'].toFixed(1)}<br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${(d['3P%'] * 100).toFixed(1)}%`;
+      } else {
+        tooltipContent = `<strong>${d.Team}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${(d['3P%'] * 100).toFixed(1)}%`;
+      }
+      tooltip.html(tooltipContent)
         .style('left', (event.pageX + 10) + 'px')
         .style('top', (event.pageY - 28) + 'px');
     }
