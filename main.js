@@ -675,19 +675,1344 @@ function showScene3() {
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('From 2004–2010, the Suns popularized the “7 seconds or less” offense, playing at a fast pace and shooting more threes. This chart compares Suns 3PA, league average 3PA, and Suns 3P%. Hover over points for details. Minutes played (MP) is shown in the tooltip for Suns.');
+    .html('From 2004-2010, the Suns popularized the "7 seconds or less" offense, playing at a fast pace and shooting more threes. This chart compares Suns 3PA, league average 3PA, and Suns 3P%. Hover over points for details. Minutes played (MP) is shown in the tooltip for Suns.');
 }
 function showScene4() {
-  d3.select('#viz').append('div').text('Scene 4: Warriors, Rockets, Modern Era');
-  d3.select('#annotation').append('div').attr('class', 'annotation').text('The Warriors and Rockets led the 3-point revolution.');
+  const plotWidth = 760;
+  const margin = {top: 40, right: 120, bottom: 50, left: 60};
+  const width = plotWidth;
+  const height = 400 - margin.top - margin.bottom;
+  const svgWidth = plotWidth + margin.left + margin.right + 200;
+
+  const svg = d3.select('#viz').append('svg')
+    .attr('width', svgWidth)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  Promise.all([
+    d3.csv('data/warriors_pergame.csv'),
+    d3.csv('data/rockets_pergame.csv'),
+    d3.csv('data/league_stats.csv')
+  ]).then(([warriorsData, rocketsData, leagueData]) => {
+    // Warriors: Filter for 2015–2020
+    const warriors = warriorsData.filter(d => {
+      if (!d.Season) return false;
+      const year = parseInt(d.Season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d['3PA'];
+      d['3P%'] = d['3P%'] ? +d['3P%'] : null;
+      return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
+    });
+    // Rockets: Filter for 2015–2020
+    const rockets = rocketsData.filter(d => {
+      if (!d.Season) return false;
+      const year = parseInt(d.Season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d['3PA'];
+      d['3P%'] = d['3P%'] ? +d['3P%'] : null;
+      return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
+    });
+    // League: Filter for 2015–2020
+    const league = leagueData.filter(d => {
+      if (!d.Season) return false;
+      const year = parseInt(d.Season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d['3PA'];
+      return year >= 2015 && year <= 2020 && d['3PA'] != null;
+    });
+
+    // X scale
+    const x = d3.scaleLinear()
+      .domain(d3.extent(warriors, d => d.year))
+      .range([0, plotWidth]);
+    // Y scale for 3PA
+    const yLeft = d3.scaleLinear()
+      .domain([0, d3.max([...warriors, ...rockets, ...league], d => d['3PA']) * 1.1])
+      .range([height, 0]);
+    // Y scale for 3P%
+    const yRight = d3.scaleLinear()
+      .domain([0, d3.max([...warriors, ...rockets], d => d['3P%']) * 1.15])
+      .range([height, 0]);
+
+    // X axis
+    svg.append('g')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x).tickFormat(d3.format('d')));
+    svg.append('text')
+      .attr('x', width/2)
+      .attr('y', height + margin.bottom - 10)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('Season');
+
+    // Y axis left
+    svg.append('g')
+      .call(d3.axisLeft(yLeft));
+    svg.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -height/2)
+      .attr('y', -margin.left + 18)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('3PA (Left Axis)');
+
+    // Y axis right
+    svg.append('g')
+      .attr('transform', `translate(${width},0)`)
+      .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
+    svg.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -height/2)
+      .attr('y', width + margin.right - 10)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('3P% (Right Axis)');
+
+    // Line generators
+    const lineWarriors3PA = d3.line()
+      .x(d => x(d.year))
+      .y(d => yLeft(d['3PA']));
+    const lineRockets3PA = d3.line()
+      .x(d => x(d.year))
+      .y(d => yLeft(d['3PA']));
+    const lineLeague3PA = d3.line()
+      .x(d => x(d.year))
+      .y(d => yLeft(d['3PA']));
+    const lineWarriors3Ppct = d3.line()
+      .x(d => x(d.year))
+      .y(d => yRight(d['3P%']));
+    const lineRockets3Ppct = d3.line()
+      .x(d => x(d.year))
+      .y(d => yRight(d['3P%']));
+
+    // Draw lines
+    svg.append('path')
+      .datum(warriors)
+      .attr('fill', 'none')
+      .attr('stroke', '#1db954')
+      .attr('stroke-width', 2.5)
+      .attr('d', lineWarriors3PA);
+    svg.append('path')
+      .datum(rockets)
+      .attr('fill', 'none')
+      .attr('stroke', '#ff6b35')
+      .attr('stroke-width', 2.5)
+      .attr('d', lineRockets3PA);
+    svg.append('path')
+      .datum(league)
+      .attr('fill', 'none')
+      .attr('stroke', '#6c757d')
+      .attr('stroke-width', 2.5)
+      .style('stroke-dasharray', '3 3')
+      .attr('d', lineLeague3PA);
+    svg.append('path')
+      .datum(warriors)
+      .attr('fill', 'none')
+      .attr('stroke', '#1db954')
+      .attr('stroke-width', 2)
+      .style('stroke-dasharray', '5 3')
+      .attr('d', lineWarriors3Ppct);
+    svg.append('path')
+      .datum(rockets)
+      .attr('fill', 'none')
+      .attr('stroke', '#ff6b35')
+      .attr('stroke-width', 2)
+      .style('stroke-dasharray', '5 3')
+      .attr('d', lineRockets3Ppct);
+
+    // Tooltip
+    const tooltip = d3.select('#viz').append('div')
+      .attr('class', 'tooltip')
+      .style('position', 'absolute')
+      .style('background', '#fff')
+      .style('border', '1px solid #ccc')
+      .style('padding', '8px 12px')
+      .style('border-radius', '4px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0);
+
+    // Circles for tooltips (Warriors 3PA)
+    svg.selectAll('circle.warriors3pa')
+      .data(warriors)
+      .enter().append('circle')
+      .attr('class', 'warriors3pa')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yLeft(d['3PA']))
+      .attr('r', 4)
+      .attr('fill', '#1db954')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>Warriors 3PA: ${d['3PA'].toFixed(1)}`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (Rockets 3PA)
+    svg.selectAll('circle.rockets3pa')
+      .data(rockets)
+      .enter().append('circle')
+      .attr('class', 'rockets3pa')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yLeft(d['3PA']))
+      .attr('r', 4)
+      .attr('fill', '#ff6b35')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>Rockets 3PA: ${d['3PA'].toFixed(1)}`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (League 3PA)
+    svg.selectAll('circle.league3pa')
+      .data(league)
+      .enter().append('circle')
+      .attr('class', 'league3pa')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yLeft(d['3PA']))
+      .attr('r', 4)
+      .attr('fill', '#6c757d')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>League Avg 3PA: ${d['3PA'].toFixed(1)}`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (Warriors 3P%)
+    svg.selectAll('circle.warriors3ppct')
+      .data(warriors)
+      .enter().append('circle')
+      .attr('class', 'warriors3ppct')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yRight(d['3P%']))
+      .attr('r', 4)
+      .attr('fill', '#1db954')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>Warriors 3P%: ${(d['3P%']*100).toFixed(1)}%`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (Rockets 3P%)
+    svg.selectAll('circle.rockets3ppct')
+      .data(rockets)
+      .enter().append('circle')
+      .attr('class', 'rockets3ppct')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yRight(d['3P%']))
+      .attr('r', 4)
+      .attr('fill', '#ff6b35')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>Rockets 3P%: ${(d['3P%']*100).toFixed(1)}%`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+
+    // Annotation for 2015–2020 (3-point revolution)
+    svg.append('rect')
+      .attr('x', x(2015))
+      .attr('y', 0)
+      .attr('width', x(2020) - x(2015))
+      .attr('height', height)
+      .attr('fill', '#1db954')
+      .attr('opacity', 0.08);
+    svg.append('text')
+      .attr('x', x(2015) + (x(2020) - x(2015))/2)
+      .attr('y', 30)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#1db954')
+      .attr('font-size', '1em')
+      .attr('font-weight', 'bold')
+      .text('3-Point Revolution Era');
+
+    // Legend (with lines)
+    const legend = svg.append('g')
+      .attr('transform', `translate(${plotWidth + 60}, 10)`);
+    // Warriors 3PA
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
+      .attr('stroke', '#1db954').attr('stroke-width', 3);
+    legend.append('text')
+      .attr('x', 36).attr('y', 4)
+      .text('Warriors 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // Rockets 3PA
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
+      .attr('stroke', '#ff6b35').attr('stroke-width', 3);
+    legend.append('text')
+      .attr('x', 36).attr('y', 28)
+      .text('Rockets 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // League 3PA
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
+      .attr('stroke', '#6c757d').attr('stroke-width', 3)
+      .style('stroke-dasharray', '3 3');
+    legend.append('text')
+      .attr('x', 36).attr('y', 52)
+      .text('League Avg 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // Warriors 3P%
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 72).attr('y2', 72)
+      .attr('stroke', '#1db954').attr('stroke-width', 2)
+      .style('stroke-dasharray', '5 3');
+    legend.append('text')
+      .attr('x', 36).attr('y', 76)
+      .text('Warriors 3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // Rockets 3P%
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 96).attr('y2', 96)
+      .attr('stroke', '#ff6b35').attr('stroke-width', 2)
+      .style('stroke-dasharray', '5 3');
+    legend.append('text')
+      .attr('x', 36).attr('y', 100)
+      .text('Rockets 3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
+    legend.append('text')
+      .attr('x', 0).attr('y', -10)
+      .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
+
+    // Title
+    svg.append('text')
+      .attr('x', width/2)
+      .attr('y', -16)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '1.3em')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#222')
+      .text('Warriors & Rockets vs. League: 3PA and 3P% (2015–2020)');
+  });
+
+  d3.select('#annotation').append('div')
+    .attr('class', 'annotation')
+    .html('From 2015–2020, the Warriors and Rockets led the 3-point revolution. The Warriors won championships with their "Splash Brothers" backcourt, while the Rockets pioneered "Moreyball" with high-volume 3-point shooting. Both teams consistently shot more threes than the league average. Hover over points for details.');
 }
 function showScene5() {
-  d3.select('#viz').append('div').text('Scene 5: 2020–Present Boom');
-  d3.select('#annotation').append('div').attr('class', 'annotation').text('Positionless basketball and high-volume shooting.');
+  const plotWidth = 760;
+  const margin = {top: 40, right: 120, bottom: 50, left: 60};
+  const width = plotWidth;
+  const height = 400 - margin.top - margin.bottom;
+  const svgWidth = plotWidth + margin.left + margin.right + 200;
+
+  const svg = d3.select('#viz').append('svg')
+    .attr('width', svgWidth)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  d3.csv('data/league_stats.csv').then(data => {
+    // Filter for 2020–Present
+    const filtered = data.filter(d => {
+      if (!d.Season) return false;
+      const year = parseInt(d.Season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d['3PA'];
+      d['3P%'] = d['3P%'] ? +d['3P%'] : null;
+      d['2PA'] = +d['FGA'] - +d['3PA'];
+      d['3PA_Ratio'] = d['3PA'] / (+d['FGA']); // Percentage of shots that are 3-pointers
+      return year >= 2020 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
+    });
+
+    // X scale
+    const x = d3.scaleLinear()
+      .domain(d3.extent(filtered, d => d.year))
+      .range([0, plotWidth]);
+    // Y scale for attempts
+    const yLeft = d3.scaleLinear()
+      .domain([0, d3.max(filtered, d => Math.max(d['3PA'], d['2PA'])) * 1.1])
+      .range([height, 0]);
+    // Y scale for 3P% and 3PA ratio
+    const yRight = d3.scaleLinear()
+      .domain([0, d3.max(filtered, d => Math.max(d['3P%'], d['3PA_Ratio'])) * 1.15])
+      .range([height, 0]);
+
+    // X axis
+    svg.append('g')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x).tickFormat(d3.format('d')));
+    svg.append('text')
+      .attr('x', width/2)
+      .attr('y', height + margin.bottom - 10)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('Season');
+
+    // Y axis left
+    svg.append('g')
+      .call(d3.axisLeft(yLeft));
+    svg.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -height/2)
+      .attr('y', -margin.left + 18)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('Attempts per Game (Left Axis)');
+
+    // Y axis right
+    svg.append('g')
+      .attr('transform', `translate(${width},0)`)
+      .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
+    svg.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('x', -height/2)
+      .attr('y', width + margin.right - 10)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#333')
+      .text('3P% & 3PA Ratio (Right Axis)');
+
+    // Line generators
+    const line3PA = d3.line()
+      .x(d => x(d.year))
+      .y(d => yLeft(d['3PA']));
+    const line2PA = d3.line()
+      .x(d => x(d.year))
+      .y(d => yLeft(d['2PA']));
+    const line3Ppct = d3.line()
+      .x(d => x(d.year))
+      .y(d => yRight(d['3P%']));
+    const line3PARatio = d3.line()
+      .x(d => x(d.year))
+      .y(d => yRight(d['3PA_Ratio']));
+
+    // Draw lines
+    svg.append('path')
+      .datum(filtered)
+      .attr('fill', 'none')
+      .attr('stroke', '#1976d2')
+      .attr('stroke-width', 2.5)
+      .attr('d', line3PA);
+    svg.append('path')
+      .datum(filtered)
+      .attr('fill', 'none')
+      .attr('stroke', '#43a047')
+      .attr('stroke-width', 2.5)
+      .attr('d', line2PA);
+    svg.append('path')
+      .datum(filtered)
+      .attr('fill', 'none')
+      .attr('stroke', '#ffb300')
+      .attr('stroke-width', 2.5)
+      .style('stroke-dasharray', '5 3')
+      .attr('d', line3Ppct);
+    svg.append('path')
+      .datum(filtered)
+      .attr('fill', 'none')
+      .attr('stroke', '#e91e63')
+      .attr('stroke-width', 2.5)
+      .style('stroke-dasharray', '8 4')
+      .attr('d', line3PARatio);
+
+    // Tooltip
+    const tooltip = d3.select('#viz').append('div')
+      .attr('class', 'tooltip')
+      .style('position', 'absolute')
+      .style('background', '#fff')
+      .style('border', '1px solid #ccc')
+      .style('padding', '8px 12px')
+      .style('border-radius', '4px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0);
+
+    // Circles for tooltips (3PA)
+    svg.selectAll('circle.pa3')
+      .data(filtered)
+      .enter().append('circle')
+      .attr('class', 'pa3')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yLeft(d['3PA']))
+      .attr('r', 4)
+      .attr('fill', '#1976d2')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3PA Ratio: ${(d['3PA_Ratio']*100).toFixed(1)}%`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (2PA)
+    svg.selectAll('circle.pa2')
+      .data(filtered)
+      .enter().append('circle')
+      .attr('class', 'pa2')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yLeft(d['2PA']))
+      .attr('r', 4)
+      .attr('fill', '#43a047')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>2PA: ${d['2PA'].toFixed(1)}`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (3P%)
+    svg.selectAll('circle.pct3')
+      .data(filtered)
+      .enter().append('circle')
+      .attr('class', 'pct3')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yRight(d['3P%']))
+      .attr('r', 4)
+      .attr('fill', '#ffb300')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>3P%: ${(d['3P%']*100).toFixed(1)}%`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+    // Circles for tooltips (3PA Ratio)
+    svg.selectAll('circle.ratio3pa')
+      .data(filtered)
+      .enter().append('circle')
+      .attr('class', 'ratio3pa')
+      .attr('cx', d => x(d.year))
+      .attr('cy', d => yRight(d['3PA_Ratio']))
+      .attr('r', 4)
+      .attr('fill', '#e91e63')
+      .on('mouseover', function(event, d) {
+        tooltip.transition().duration(100).style('opacity', 1);
+        tooltip.html(`<strong>${d.Season}</strong><br>3PA Ratio: ${(d['3PA_Ratio']*100).toFixed(1)}%<br>3PA: ${d['3PA'].toFixed(1)}`)
+          .style('left', (event.pageX + 10) + 'px')
+          .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mousemove', function(event) {
+        tooltip.style('left', (event.pageX + 10) + 'px')
+               .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+        tooltip.transition().duration(200).style('opacity', 0);
+      });
+
+    // Annotation for 2020–Present (3-point boom)
+    svg.append('rect')
+      .attr('x', x(2020))
+      .attr('y', 0)
+      .attr('width', x(2024) - x(2020))
+      .attr('height', height)
+      .attr('fill', '#1976d2')
+      .attr('opacity', 0.08);
+    svg.append('text')
+      .attr('x', x(2020) + (x(2024) - x(2020))/2)
+      .attr('y', 30)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#1976d2')
+      .attr('font-size', '1em')
+      .attr('font-weight', 'bold')
+      .text('3-Point Boom Era');
+
+    // Legend (with lines)
+    const legend = svg.append('g')
+      .attr('transform', `translate(${plotWidth + 60}, 10)`);
+    // 3PA
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
+      .attr('stroke', '#1976d2').attr('stroke-width', 3);
+    legend.append('text')
+      .attr('x', 36).attr('y', 4)
+      .text('3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // 2PA
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
+      .attr('stroke', '#43a047').attr('stroke-width', 3);
+    legend.append('text')
+      .attr('x', 36).attr('y', 28)
+      .text('2PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // 3P%
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
+      .attr('stroke', '#ffb300').attr('stroke-width', 3)
+      .style('stroke-dasharray', '5 3');
+    legend.append('text')
+      .attr('x', 36).attr('y', 52)
+      .text('3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
+    // 3PA Ratio
+    legend.append('line')
+      .attr('x1', 0).attr('x2', 30).attr('y1', 72).attr('y2', 72)
+      .attr('stroke', '#e91e63').attr('stroke-width', 3)
+      .style('stroke-dasharray', '8 4');
+    legend.append('text')
+      .attr('x', 36).attr('y', 76)
+      .text('3PA Ratio (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
+    legend.append('text')
+      .attr('x', 0).attr('y', -10)
+      .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
+
+    // Title
+    svg.append('text')
+      .attr('x', width/2)
+      .attr('y', -16)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '1.3em')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#222')
+      .text('NBA 3-Point Boom: 2020–Present');
+  });
+
+  d3.select('#annotation').append('div')
+    .attr('class', 'annotation')
+    .html('The 2020s have seen an unprecedented 3-point boom. Teams now shoot more 3-pointers than 2-pointers, with the 3PA ratio exceeding 50% of all field goal attempts. This era represents true "positionless basketball" where even centers and power forwards are expected to shoot threes. The efficiency (3P%) has remained high despite the increased volume.');
 }
 function showScene6() {
-  d3.select('#viz').append('div').text('Scene 6: Free Exploration (interactive dashboard)');
-  d3.select('#annotation').append('div').attr('class', 'annotation').text('Explore top shooters, teams, and trends.');
+  const margin = {top: 20, right: 20, bottom: 40, left: 60};
+  const width = 900 - margin.left - margin.right;
+  const height = 300 - margin.top - margin.bottom;
+
+  // Create main container for the dashboard
+  const dashboard = d3.select('#viz')
+    .append('div')
+    .style('display', 'grid')
+    .style('grid-template-columns', '1fr 1fr')
+    .style('grid-template-rows', 'auto auto')
+    .style('gap', '20px')
+    .style('padding', '20px');
+
+  // Panel 1: Top 10 3PT Shooters
+  const panel1 = dashboard.append('div')
+    .style('grid-column', '1')
+    .style('grid-row', '1')
+    .style('background', '#f8f9fa')
+    .style('border-radius', '8px')
+    .style('padding', '15px')
+    .style('border', '1px solid #dee2e6');
+
+  panel1.append('h3')
+    .text('Top 10 3PT Shooters')
+    .style('margin', '0 0 15px 0')
+    .style('color', '#333')
+    .style('font-size', '1.2em');
+
+  // Panel 2: Top 3PT Teams by Year
+  const panel2 = dashboard.append('div')
+    .style('grid-column', '2')
+    .style('grid-row', '1')
+    .style('background', '#f8f9fa')
+    .style('border-radius', '8px')
+    .style('padding', '15px')
+    .style('border', '1px solid #dee2e6');
+
+  panel2.append('h3')
+    .text('Top 3PT Shooting Teams (2020-Present)')
+    .style('margin', '0 0 15px 0')
+    .style('color', '#333')
+    .style('font-size', '1.2em');
+
+  // Add sort selector for teams
+  const teamSortSelector = panel2.append('div')
+    .style('margin-bottom', '15px');
+
+  teamSortSelector.append('label')
+    .text('Sort by: ')
+    .style('margin-right', '10px')
+    .style('font-weight', 'bold');
+
+  const teamSortSelect = teamSortSelector.append('select')
+    .style('padding', '5px')
+    .style('border-radius', '4px')
+    .style('border', '1px solid #ccc');
+
+  const teamSortOptions = [
+    {value: '3PA', label: '3PA (Volume)'},
+    {value: '3P%', label: '3P% (Accuracy)'},
+    {value: '3PM', label: '3PM (Makes)'}
+  ];
+
+  teamSortSelect.selectAll('option')
+    .data(teamSortOptions)
+    .enter().append('option')
+    .attr('value', d => d.value)
+    .text(d => d.label)
+    .property('selected', d => d.value === '3PA');
+
+  // Load data for all panels
+  Promise.all([
+    d3.csv('data/Team_Stats_Per_Game.csv'),
+    d3.csv('data/league_stats.csv'),
+    d3.csv('data/Player_Shooting.csv'),
+    d3.csv('data/Player_Per_Game.csv')
+  ]).then(([teamData, leagueData, playerShootingData, playerPerGameData]) => {
+    
+    // Panel 2: Top 3PT Teams by Year
+    const teamDataFiltered = teamData.filter(d => {
+      if (!d.season) return false;
+      const year = parseInt(d.season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d.x3pa_per_game;
+      d['3P%'] = d.x3p_percent ? +d.x3p_percent : null;
+      d['3PM'] = +d.x3p_per_game;
+      d.Team = d.team;
+      d.Season = d.season;
+      return year >= 2020 && d['3PA'] != null && d['3P%'] != null;
+    });
+
+    console.log('Team data sample:', teamDataFiltered.slice(0, 3));
+    console.log('Team years available:', [...new Set(teamDataFiltered.map(d => d.year))].sort());
+
+    // Function to update team table
+    function updateTeamTable(sortBy = '3PA') {
+      console.log('Updating team table sorted by:', sortBy);
+      
+      // Clear existing table
+      panel2.selectAll('table').remove();
+
+      // Filter teams based on sort criteria
+      let filteredTeams = teamDataFiltered;
+      if (sortBy === '3P%') {
+        filteredTeams = teamDataFiltered.filter(d => d['3PA'] >= 30); // Minimum 30 team 3PA for meaningful percentage
+      }
+
+      // Group by year and get top 5 teams per year
+      const teamsByYear = {};
+      filteredTeams.forEach(d => {
+        if (!teamsByYear[d.year]) teamsByYear[d.year] = [];
+        teamsByYear[d.year].push(d);
+      });
+
+      // Sort teams by selected metric within each year and take top 5
+      Object.keys(teamsByYear).forEach(year => {
+        teamsByYear[year].sort((a, b) => b[sortBy] - a[sortBy]);
+        teamsByYear[year] = teamsByYear[year].slice(0, 5);
+      });
+
+      // Add annotation for 3P% filter
+      if (sortBy === '3P%') {
+        panel2.append('p')
+          .attr('class', 'team-filter-note')
+          .text('Note: Only teams with 30+ 3PA per game are shown for meaningful percentage comparisons')
+          .style('color', '#1976d2')
+          .style('font-size', '0.9em')
+          .style('font-style', 'italic')
+          .style('margin-bottom', '10px');
+      }
+
+      const teamTable = panel2.append('table')
+        .style('width', '100%')
+        .style('border-collapse', 'collapse')
+        .style('font-size', '0.9em');
+
+      // Header
+      teamTable.append('thead').append('tr')
+        .selectAll('th')
+        .data(['Year', 'Team', '3PA', '3P%'])
+        .enter().append('th')
+        .text(d => d)
+        .style('padding', '8px')
+        .style('text-align', 'left')
+        .style('border-bottom', '2px solid #dee2e6')
+        .style('background', '#e9ecef');
+
+      // Rows
+      const teamTbody = teamTable.append('tbody');
+      const teamRows = [];
+      Object.keys(teamsByYear).sort().forEach(year => {
+        teamsByYear[year].forEach((team, i) => {
+          teamRows.push({
+            year: year,
+            team: team.Team,
+            '3PA': team['3PA'],
+            '3P%': team['3P%'],
+            rank: i + 1
+          });
+        });
+      });
+
+      const teamTableRows = teamTbody.selectAll('tr')
+        .data(teamRows)
+        .enter().append('tr')
+        .style('background', (d, i) => i % 2 === 0 ? '#f8f9fa' : 'white');
+
+      teamTableRows.selectAll('td')
+        .data(d => [
+          d.year,
+          d.team,
+          d['3PA'].toFixed(1),
+          (d['3P%'] * 100).toFixed(1) + '%'
+        ])
+        .enter().append('td')
+        .text(d => d)
+        .style('padding', '6px 8px')
+        .style('border-bottom', '1px solid #dee2e6');
+    }
+
+    // Initial team table
+    updateTeamTable('3PA');
+
+    // Update team table when sort changes
+    teamSortSelect.on('change', function() {
+      console.log('Team sort changed to:', this.value);
+      updateTeamTable(this.value);
+    });
+
+    // Panel 3: Team 3PT by Year (Full width)
+    const panel3 = dashboard.append('div')
+      .style('grid-column', '1 / -1')
+      .style('grid-row', '2')
+      .style('background', '#f8f9fa')
+      .style('border-radius', '8px')
+      .style('padding', '15px')
+      .style('border', '1px solid #dee2e6');
+
+    panel3.append('h3')
+      .text('Team 3PT Performance by Year')
+      .style('margin', '0 0 15px 0')
+      .style('color', '#333')
+      .style('font-size', '1.2em');
+
+    // Process player data
+    const playerData = playerShootingData.map(shooting => {
+      const perGame = playerPerGameData.find(pg => 
+        pg.player === shooting.player && pg.season === shooting.season
+      );
+      return {
+        ...shooting,
+        ...perGame
+      };
+    }).filter(d => d.player && d.season && d.x3pa_per_game && d.x3p_percent);
+
+    console.log('Player data sample:', playerData.slice(0, 3));
+
+    // Filter and process player data
+    const processedPlayerData = playerData.filter(d => {
+      if (!d.season) return false;
+      const year = parseInt(d.season.split('-')[0]);
+      d.year = year;
+      d['3PA'] = +d.x3pa_per_game;
+      d['3P%'] = d.x3p_percent ? +d.x3p_percent : null;
+      d['3PM'] = d.x3p_per_game ? +d.x3p_per_game : null;
+      d.Player = d.player;
+      d.Tm = d.team;
+      d.Season = d.season;
+      return d['3PA'] != null && d['3P%'] != null && d['3PA'] > 0;
+    });
+
+    console.log('Processed player data sample:', processedPlayerData.slice(0, 3));
+
+    // Get available years for player data
+    const playerYears = [...new Set(processedPlayerData.map(d => d.year))].sort();
+    const defaultYear = playerYears.includes(2025) ? 2025 : Math.max(...playerYears);
+
+    console.log('Available years:', playerYears);
+    console.log('Default year:', defaultYear);
+
+    // Year selector for players
+    const playerYearSelector = panel1.append('div')
+      .style('margin-bottom', '15px');
+
+    playerYearSelector.append('label')
+      .text('Select Year: ')
+      .style('margin-right', '10px')
+      .style('font-weight', 'bold');
+
+    const playerSelect = playerYearSelector.append('select')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('border', '1px solid #ccc')
+      .style('margin-right', '15px');
+
+    // Populate dropdown options
+    playerSelect.selectAll('option')
+      .data(playerYears)
+      .enter().append('option')
+      .attr('value', d => d)
+      .text(d => d)
+      .property('selected', d => d === defaultYear);
+
+    // Sort by selector for players
+    playerYearSelector.append('label')
+      .text('Sort by: ')
+      .style('margin-right', '10px')
+      .style('font-weight', 'bold');
+
+    const sortSelect = playerYearSelector.append('select')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('border', '1px solid #ccc');
+
+    const sortOptions = [
+      {value: '3PA', label: '3PA (Volume)'},
+      {value: '3P%', label: '3P% (Accuracy)'},
+      {value: '3PM', label: '3PM (Makes)'}
+    ];
+
+    sortSelect.selectAll('option')
+      .data(sortOptions)
+      .enter().append('option')
+      .attr('value', d => d.value)
+      .text(d => d.label)
+      .property('selected', d => d.value === '3PA');
+
+    console.log('Dropdown populated with years:', playerYears);
+
+    // Function to update player table
+    function updatePlayerTable(selectedYear, sortBy = '3PA') {
+      console.log('Updating player table for year:', selectedYear, 'sort by:', sortBy);
+      
+      // Clear existing table
+      panel1.selectAll('table').remove();
+
+      // Filter players for selected year
+      let yearPlayers = processedPlayerData.filter(d => d.year === selectedYear);
+      
+      // Remove duplicates (keep first occurrence of each player)
+      const seen = new Set();
+      yearPlayers = yearPlayers.filter(d => {
+        const key = `${d.Player}-${d.year}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      
+      // Apply minimum 3PA filter when sorting by 3P%
+      if (sortBy === '3P%') {
+        yearPlayers = yearPlayers.filter(d => d['3PA'] >= 5);
+        console.log('Filtered to players with 5+ 3PA:', yearPlayers.length);
+      }
+
+      // Get top 10 by selected metric
+      yearPlayers = yearPlayers
+        .sort((a, b) => b[sortBy] - a[sortBy])
+        .slice(0, 10);
+
+      console.log('Players for year', selectedYear, 'sorted by', sortBy, ':', yearPlayers.length);
+
+      if (yearPlayers.length === 0) {
+        panel1.append('p')
+          .text(`No player data available for ${selectedYear}`)
+          .style('color', '#666')
+          .style('font-style', 'italic');
+        return;
+      }
+
+      const shooterTable = panel1.append('table')
+        .style('width', '100%')
+        .style('border-collapse', 'collapse')
+        .style('font-size', '0.9em');
+
+      // Header
+      shooterTable.append('thead').append('tr')
+        .selectAll('th')
+        .data(['Rank', 'Player', 'Team', '3PA', '3P%', '3PM'])
+        .enter().append('th')
+        .text(d => d)
+        .style('padding', '8px')
+        .style('text-align', 'left')
+        .style('border-bottom', '2px solid #dee2e6')
+        .style('background', '#e9ecef');
+
+      // Rows
+      const tbody = shooterTable.append('tbody');
+      const rows = tbody.selectAll('tr')
+        .data(yearPlayers)
+        .enter().append('tr')
+        .style('cursor', 'pointer')
+        .on('mouseover', function() {
+          d3.select(this).style('background', '#f1f3f4');
+        })
+        .on('mouseout', function() {
+          d3.select(this).style('background', 'transparent');
+        })
+        .on('click', function(event, d) {
+          showPlayerDetails(d);
+        });
+
+      rows.selectAll('td')
+        .data((d, i) => [
+          i + 1,
+          d.Player,
+          d.Tm || 'N/A',
+          d['3PA'].toFixed(1),
+          (d['3P%'] * 100).toFixed(1) + '%',
+          d['3PM'] ? d['3PM'].toFixed(1) : 'N/A'
+        ])
+        .enter().append('td')
+        .text(d => d)
+        .style('padding', '8px')
+        .style('border-bottom', '1px solid #dee2e6');
+    }
+
+    // Function to update annotation
+    function updateAnnotation(sortBy) {
+      // Remove existing annotation
+      panel1.selectAll('.filter-note').remove();
+      
+      // Add annotation only for 3P% filter
+      if (sortBy === '3P%') {
+        panel1.append('p')
+          .attr('class', 'filter-note')
+          .text('Note: Only players with 5+ 3PA per game are shown for meaningful percentage comparisons')
+          .style('color', '#1976d2')
+          .style('font-size', '0.9em')
+          .style('font-style', 'italic')
+          .style('margin-bottom', '10px');
+      }
+    }
+
+    // Initial player table
+    updatePlayerTable(defaultYear, '3PA');
+    updateAnnotation('3PA');
+
+    // Update player table when year or sort changes
+    playerSelect.on('change', function() {
+      console.log('Year changed to:', this.value);
+      const currentSort = sortSelect.property('value');
+      updatePlayerTable(+this.value, currentSort);
+      // Don't update annotation here - keep it for the same filter
+    });
+
+    sortSelect.on('change', function() {
+      console.log('Sort changed to:', this.value);
+      const currentYear = +playerSelect.property('value');
+      updatePlayerTable(currentYear, this.value);
+      updateAnnotation(this.value); // Update annotation when filter changes
+    });
+
+    // Panel 3: Interactive Team 3PT Chart
+    const svg = panel3.append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Year selector
+    const yearSelector = panel3.append('div')
+      .style('margin-bottom', '15px');
+
+    yearSelector.append('label')
+      .text('Select Year: ')
+      .style('margin-right', '10px')
+      .style('font-weight', 'bold');
+
+    const select = yearSelector.append('select')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('border', '1px solid #ccc')
+      .style('margin-right', '15px');
+
+    const years = [...new Set(teamDataFiltered.map(d => d.year))].sort();
+    console.log('Team years available:', years);
+
+    if (years.length === 0) {
+      yearSelector.append('p')
+        .text('No team data available')
+        .style('color', '#666')
+        .style('font-style', 'italic');
+    } else {
+      select.selectAll('option')
+        .data(years)
+        .enter().append('option')
+        .attr('value', d => d)
+        .text(d => d);
+
+      // Sort selector for chart
+      yearSelector.append('label')
+        .text('Sort by: ')
+        .style('margin-right', '10px')
+        .style('font-weight', 'bold');
+
+      const chartSortSelect = yearSelector.append('select')
+        .style('padding', '5px')
+        .style('border-radius', '4px')
+        .style('border', '1px solid #ccc');
+
+      const chartSortOptions = [
+        {value: '3PA', label: '3PA (Volume)'},
+        {value: '3P%', label: '3P% (Accuracy)'},
+        {value: '3PM', label: '3PM (Makes)'}
+      ];
+
+      chartSortSelect.selectAll('option')
+        .data(chartSortOptions)
+        .enter().append('option')
+        .attr('value', d => d.value)
+        .text(d => d.label)
+        .property('selected', d => d.value === '3PA');
+
+      // Initial chart
+      updateTeamChart(years[0], '3PA');
+
+      // Update chart when year or sort changes
+      select.on('change', function() {
+        console.log('Team chart year changed to:', this.value);
+        updateTeamChart(+this.value, chartSortSelect.property('value'));
+      });
+
+      chartSortSelect.on('change', function() {
+        console.log('Team chart sort changed to:', this.value);
+        updateTeamChart(+select.property('value'), this.value);
+      });
+    }
+
+    function updateTeamChart(selectedYear, sortBy = '3PA') {
+      console.log('Updating team chart for year:', selectedYear, 'sort by:', sortBy);
+      
+      // Clear existing annotation
+      panel3.selectAll('.chart-filter-note').remove();
+      
+      let yearData = teamDataFiltered.filter(d => d.year === selectedYear);
+      
+      // Apply minimum 3PA filter when sorting by 3P%
+      if (sortBy === '3P%') {
+        yearData = yearData.filter(d => d['3PA'] >= 30);
+        console.log('Filtered to teams with 30+ 3PA:', yearData.length);
+        
+        // Add annotation for 3P% filter
+        panel3.append('p')
+          .attr('class', 'chart-filter-note')
+          .text('Note: Only teams with 30+ 3PA per game are shown for meaningful percentage comparisons')
+          .style('color', '#1976d2')
+          .style('font-size', '0.9em')
+          .style('font-style', 'italic')
+          .style('margin-bottom', '10px');
+      }
+      
+      yearData = yearData
+        .sort((a, b) => b[sortBy] - a[sortBy])
+        .slice(0, 15); // Top 15 teams
+
+      console.log('Teams for year', selectedYear, 'sorted by', sortBy, ':', yearData.length);
+
+      // Clear previous chart
+      svg.selectAll('*').remove();
+
+      if (yearData.length === 0) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height / 2)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '1.1em')
+          .style('fill', '#666')
+          .text(`No team data available for ${selectedYear}`);
+        return;
+      }
+
+      // Scales
+      const x = d3.scaleBand()
+        .domain(yearData.map(d => d.Team))
+        .range([0, width])
+        .padding(0.1);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(yearData, d => d[sortBy]) * 1.1])
+        .range([height, 0]);
+
+      // X axis
+      svg.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x))
+        .selectAll('text')
+        .style('text-anchor', 'end')
+        .attr('dx', '-.8em')
+        .attr('dy', '.15em')
+        .attr('transform', 'rotate(-45)');
+
+      // Y axis
+      svg.append('g')
+        .call(d3.axisLeft(y));
+
+      // Bars
+      svg.selectAll('rect')
+        .data(yearData)
+        .enter().append('rect')
+        .attr('x', d => x(d.Team))
+        .attr('y', d => y(d[sortBy]))
+        .attr('width', x.bandwidth())
+        .attr('height', d => height - y(d[sortBy]))
+        .attr('fill', '#1976d2')
+        .style('opacity', 0.8)
+        .on('mouseover', function(event, d) {
+          d3.select(this).style('opacity', 1);
+          showTooltip(event, d);
+        })
+        .on('mouseout', function() {
+          d3.select(this).style('opacity', 0.8);
+          hideTooltip();
+        });
+
+      // Title
+      svg.append('text')
+        .attr('x', width / 2)
+        .attr('y', -5)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '1.1em')
+        .style('font-weight', 'bold')
+        .text(`Top 15 Teams by ${sortBy} - ${selectedYear}`);
+
+      // Y axis label
+      const yAxisLabels = {
+        '3PA': '3PA per Game',
+        '3P%': '3P%',
+        '3PM': '3PM per Game'
+      };
+      
+      svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 0 - margin.left)
+        .attr('x', 0 - (height / 2))
+        .attr('dy', '1em')
+        .style('text-anchor', 'middle')
+        .text(yAxisLabels[sortBy] || 'Value');
+    }
+
+    // Tooltip
+    const tooltip = d3.select('#viz').append('div')
+      .attr('class', 'tooltip')
+      .style('position', 'absolute')
+      .style('background', '#fff')
+      .style('border', '1px solid #ccc')
+      .style('padding', '8px 12px')
+      .style('border-radius', '4px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0)
+      .style('z-index', '1000');
+
+    function showTooltip(event, d) {
+      tooltip.transition().duration(200).style('opacity', 1);
+      tooltip.html(`<strong>${d.Team}</strong><br>3PA: ${d['3PA'].toFixed(1)}<br>3P%: ${(d['3P%'] * 100).toFixed(1)}%`)
+        .style('left', (event.pageX + 10) + 'px')
+        .style('top', (event.pageY - 28) + 'px');
+    }
+
+    function hideTooltip() {
+      tooltip.transition().duration(500).style('opacity', 0);
+    }
+
+    // Player details modal
+    function showPlayerDetails(player) {
+      // Remove existing modal
+      d3.selectAll('.player-modal').remove();
+
+      const modal = d3.select('body').append('div')
+        .attr('class', 'player-modal')
+        .style('position', 'fixed')
+        .style('top', '0')
+        .style('left', '0')
+        .style('width', '100%')
+        .style('height', '100%')
+        .style('background', 'rgba(0,0,0,0.5)')
+        .style('display', 'flex')
+        .style('justify-content', 'center')
+        .style('align-items', 'center')
+        .style('z-index', '1000');
+
+      const modalContent = modal.append('div')
+        .style('background', 'white')
+        .style('padding', '30px')
+        .style('border-radius', '8px')
+        .style('max-width', '500px')
+        .style('text-align', 'center');
+
+      modalContent.append('h2')
+        .text(player.Player)
+        .style('margin', '0 0 20px 0')
+        .style('color', '#333');
+
+      modalContent.append('p')
+        .html(`<strong>Team:</strong> ${player.Tm || 'N/A'}`)
+        .style('margin', '10px 0');
+
+      modalContent.append('p')
+        .html(`<strong>Season:</strong> ${player.Season}`)
+        .style('margin', '10px 0');
+
+      modalContent.append('p')
+        .html(`<strong>3PA per Game:</strong> ${player['3PA'].toFixed(1)}`)
+        .style('margin', '10px 0');
+
+      modalContent.append('p')
+        .html(`<strong>3P%:</strong> ${(player['3P%'] * 100).toFixed(1)}%`)
+        .style('margin', '10px 0');
+
+      modalContent.append('p')
+        .html(`<strong>3PM per Game:</strong> ${player['3PM'] ? player['3PM'].toFixed(1) : 'N/A'}`)
+        .style('margin', '10px 0');
+
+      // Add additional stats if available
+      if (player.G) {
+        modalContent.append('p')
+          .html(`<strong>Games Played:</strong> ${player.G}`)
+          .style('margin', '10px 0');
+      }
+
+      if (player.MP) {
+        modalContent.append('p')
+          .html(`<strong>Minutes per Game:</strong> ${player.MP}`)
+          .style('margin', '10px 0');
+      }
+
+      modalContent.append('button')
+        .text('Close')
+        .style('margin-top', '20px')
+        .style('padding', '10px 20px')
+        .style('background', '#1976d2')
+        .style('color', 'white')
+        .style('border', 'none')
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .on('click', () => modal.remove());
+
+      // Close on background click
+      modal.on('click', function(event) {
+        if (event.target === this) modal.remove();
+      });
+    }
+  });
+
+  d3.select('#annotation').append('div')
+    .attr('class', 'annotation')
+    .html('Explore the data! Use the year selectors to see different seasons. Click on players in the top 10 list to see detailed stats. The interactive dashboard shows real player and team data from your CSV files. Discover who the top 3-point shooters were in different years and how teams ranked in 3-point shooting.');
 }
 
 // --- Initialize ---
