@@ -1,4 +1,3 @@
-// helper functions
 function createTooltip() {
   return d3.select('#viz').append('div')
     .attr('class', 'tooltip')
@@ -13,7 +12,6 @@ function createTooltip() {
     .style('font-size', '12px');
 }
 
-// make line curve
 function createLineGenerator(x, y) {
   return d3.line()
     .x(d => x(d.year))
@@ -31,6 +29,7 @@ function animateLine(path, duration = 1000) {
     .ease(d3.easeLinear)
     .attr('stroke-dashoffset', 0);
 }
+
 
 function createInteractiveCircle(svg, data, x, y, color, radius = 4, tooltip, valueKey = 'value', className = 'interactive-circle') {
   return svg.selectAll(`circle.${className}`)
@@ -74,7 +73,6 @@ function createInteractiveCircle(svg, data, x, y, color, radius = 4, tooltip, va
 }
 
 function createAxisWithTransitions(svg, x, y, width, height, margin) {
-  // X axis with transition
   const xAxis = svg.append('g')
     .attr('transform', `translate(0,${height})`)
     .style('opacity', 0);
@@ -83,7 +81,6 @@ function createAxisWithTransitions(svg, x, y, width, height, margin) {
     .duration(500)
     .style('opacity', 1);
   
-  // Y axis with transition
   const yAxis = svg.append('g')
     .style('opacity', 0);
   
@@ -109,14 +106,12 @@ function createLegend(svg, legendData, plotWidth, margin) {
     const legendItem = legend.append('g')
       .attr('transform', `translate(0, ${i * 24})`);
     
-    // Line
     legendItem.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
       .attr('stroke', item.color)
       .attr('stroke-width', item.strokeWidth || 3)
       .style('stroke-dasharray', item.dashArray || 'none');
     
-    // Text
     legendItem.append('text')
       .attr('x', 36).attr('y', 4)
       .text(item.label)
@@ -124,7 +119,6 @@ function createLegend(svg, legendData, plotWidth, margin) {
       .attr('font-size', '1em');
   });
   
-  // Legend title
   legend.append('text')
     .attr('x', 0).attr('y', -10)
     .text('Legend:')
@@ -162,7 +156,6 @@ function createAnnotationText(svg, x, y, text, color = '#1976d2') {
     .style('opacity', 1);
 }
 
-// Scene transition helper
 function transitionToScene(newScene) {
   d3.select('#viz')
     .transition()
@@ -228,7 +221,6 @@ function showScene1() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // filter for 1979-80 onward and valid 3pa
     const filtered = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -238,7 +230,6 @@ function showScene1() {
       return year >= 1980 && d['3PA'] != null && d['3PA'] !== '';
     });
 
-    // scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, width]);
@@ -247,13 +238,12 @@ function showScene1() {
       .domain([0, d3.max(filtered, d => d['3PA']) * 1.1])
       .range([height, 0]);
 
-    // create axes with transitions
+
     const { xAxis, yAxis } = createAxisWithTransitions(svg, x, y, width, height, margin);
     
     xAxis.call(d3.axisBottom(x).tickFormat(d3.format('d')));
     yAxis.call(d3.axisLeft(y));
 
-    // axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
@@ -279,10 +269,7 @@ function showScene1() {
       .delay(300)
       .style('opacity', 1);
 
-    // prepare data for line
     const lineData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
-
-    // create line with animation
     const line = createLineGenerator(x, y);
     const path = svg.append('path')
       .datum(lineData)
@@ -290,21 +277,16 @@ function showScene1() {
       .attr('stroke', '#1976d2')
       .attr('stroke-width', 2.5)
       .attr('d', line);
-
-    // animate the line
     animateLine(path, 1500);
 
-    // create tooltip
     const tooltip = createTooltip();
     tooltip.content = (d) => {
       const originalData = filtered.find(item => item.year === d.year);
       return `<strong>${originalData.Season}</strong><br>3PA: ${originalData['3PA'].toFixed(1)}<br>3P%: ${originalData['3P%'] ? (originalData['3P%']*100).toFixed(1)+'%' : 'N/A'}`;
     };
 
-    // create interactive circles
     createInteractiveCircle(svg, lineData, x, y, '#ffb300', 4, tooltip, 'value', 'scene1-circles');
 
-    // annotations with transitions
     const annotations = [
       {
         note: { label: '3-point line introduced', align: 'middle' },
@@ -323,7 +305,6 @@ function showScene1() {
       }
     ].filter(a => a.data);
 
-    // add annotations with delays
     annotations.forEach((annotation, i) => {
       setTimeout(() => {
         const makeAnnotations = d3.annotation()
@@ -349,7 +330,6 @@ function showScene1() {
       }, 1000 + (i * 300));
     });
 
-    // title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -388,7 +368,6 @@ function showScene2() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // filter for 1990-2000
     const filtered = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -399,7 +378,6 @@ function showScene2() {
       return year >= 1990 && year <= 2000 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
     });
 
-    // scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, plotWidth]);
@@ -412,13 +390,11 @@ function showScene2() {
       .domain([0, d3.max(filtered, d => d['3P%']) * 1.15])
       .range([height, 0]);
 
-    // create axes with transitions
     const { xAxis, yAxis } = createAxisWithTransitions(svg, x, yLeft, width, height, margin);
     
     xAxis.call(d3.axisBottom(x).tickValues([1990, 1992, 1994, 1996, 1998, 2000]).tickFormat(d3.format('d')));
     yAxis.call(d3.axisLeft(yLeft));
 
-    // right y axis
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
       .style('opacity', 0)
@@ -428,7 +404,6 @@ function showScene2() {
       .delay(300)
       .style('opacity', 1);
 
-    // axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
@@ -467,17 +442,14 @@ function showScene2() {
       .delay(400)
       .style('opacity', 1);
 
-    // prepare data for lines
     const line3PAData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
     const line2PAData = filtered.map(d => ({ year: d.year, value: d['2PA'] }));
     const line3PpctData = filtered.map(d => ({ year: d.year, value: d['3P%'] }));
 
-    // create lines with animations
     const line3PA = createLineGenerator(x, yLeft);
     const line2PA = createLineGenerator(x, yLeft);
     const line3Ppct = createLineGenerator(x, yRight);
 
-    // draw lines with staggered animations
     const path3PA = svg.append('path')
       .datum(line3PAData)
       .attr('fill', 'none')
@@ -500,16 +472,13 @@ function showScene2() {
       .style('stroke-dasharray', '5 3')
       .attr('d', line3Ppct);
 
-    // animate lines with delays
     setTimeout(() => animateLine(path3PA, 1000), 500);
     setTimeout(() => animateLine(path2PA, 1000), 1000);
     setTimeout(() => animateLine(path3Ppct, 1000), 1500);
 
-    // create annotation with transition
     createAnnotation(svg, { start: x(1994), end: x(1997) }, height, '3PT Line Shortened', '#ffb300');
     createAnnotationText(svg, x(1994) + (x(1997) - x(1994))/2, 30, '3PT Line Shortened', '#ffb300');
 
-    // create interactive circles with different colors and proper tooltips
     setTimeout(() => {
       const tooltip3PA = createTooltip();
       tooltip3PA.content = (d) => {
@@ -537,7 +506,6 @@ function showScene2() {
       createInteractiveCircle(svg, line3PpctData, x, yRight, '#ffb300', 5, tooltip3Ppct, 'value', 'scene2-3ppct-circles');
     }, 1200);
 
-    // create legend with transitions
     const legendData = [
       { color: '#1976d2', label: '3PA (Left Axis)' },
       { color: '#43a047', label: '2PA (Left Axis)' },
@@ -546,7 +514,6 @@ function showScene2() {
 
     setTimeout(() => createLegend(svg, legendData, plotWidth, margin), 3500);
 
-    // title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -588,7 +555,6 @@ function showScene3() {
     d3.csv('data/suns_pergame.csv'),
     d3.csv('data/league_stats.csv')
   ]).then(([sunsData, leagueData]) => {
-    // suns: filter for 2000–2010
     const suns = sunsData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -598,7 +564,6 @@ function showScene3() {
       d['MP'] = +d['MP'];
       return year >= 2000 && year <= 2010 && d['3PA'] != null && d['3P%'] != null && d['MP'] != null;
     });
-    // league: filter for 2000–2010
     const league = leagueData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -606,27 +571,22 @@ function showScene3() {
       d['3PA'] = +d['3PA'];
       return year >= 2000 && year <= 2010 && d['3PA'] != null;
     });
-    // map league by year for tooltip
     const leagueByYear = {};
     league.forEach(d => { leagueByYear[d.year] = d; });
 
-    // X scale
     const x = d3.scaleLinear()
       .domain(d3.extent(suns, d => d.year))
       .range([0, plotWidth]);
-    // Y scale for 3PA
     const yLeft = d3.scaleLinear()
       .domain([0, d3.max([...suns, ...league], d => d['3PA']) * 1.1])
       .range([height, 0]);
-    // Y scale for 3P%
     const yRight = d3.scaleLinear()
       .domain([
-        d3.min(suns, d => d['3P%']) * 0.95, // Start at 95% of min value
-        d3.max(suns, d => d['3P%']) * 1.05  // End at 105% of max value
+        d3.min(suns, d => d['3P%']) * 0.95,
+        d3.max(suns, d => d['3P%']) * 1.05
       ])
       .range([height, 0]);
 
-    // X axis
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues([2000, 2002, 2004, 2006, 2008, 2010]).tickFormat(d3.format('d')));
@@ -637,7 +597,6 @@ function showScene3() {
       .attr('fill', '#333')
       .text('Season');
 
-    // Y axis left
     svg.append('g')
       .call(d3.axisLeft(yLeft));
     svg.append('text')
@@ -648,7 +607,6 @@ function showScene3() {
       .attr('fill', '#333')
       .text('3PA (Left Axis)');
 
-    // Y axis right
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
       .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
@@ -660,7 +618,6 @@ function showScene3() {
       .attr('fill', '#333')
       .text('3P% (Right Axis)');
 
-    // Line generators
     const lineSuns3PA = d3.line()
       .x(d => x(d.year))
       .y(d => yLeft(d['3PA']));
@@ -671,7 +628,6 @@ function showScene3() {
       .x(d => x(d.year))
       .y(d => yRight(d['3P%']));
 
-    // Draw lines
     svg.append('path')
       .datum(suns)
       .attr('fill', 'none')
@@ -681,7 +637,7 @@ function showScene3() {
     svg.append('path')
       .datum(league)
       .attr('fill', 'none')
-      .attr('stroke', '#888888') // Changed to gray
+      .attr('stroke', '#888888')
       .attr('stroke-width', 2.5)
       .attr('d', lineLeague3PA);
     svg.append('path')
@@ -693,7 +649,6 @@ function showScene3() {
       .attr('d', line3Ppct);
 
 
-    // Annotation for 2004–2010 (7 seconds or less) - moved before tooltip circles
     svg.append('rect')
       .attr('x', x(2004))
       .attr('y', 0)
@@ -710,7 +665,6 @@ function showScene3() {
       .attr('font-weight', 'bold')
       .text('7 Seconds or Less Era');
 
-    // Tooltip
     const tooltip = d3.select('#viz').append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
@@ -721,7 +675,6 @@ function showScene3() {
       .style('pointer-events', 'none')
       .style('opacity', 0);
 
-    // Circles for tooltips (Suns 3PA)
     svg.selectAll('circle.pa3')
       .data(suns)
       .enter().append('circle')
@@ -743,7 +696,6 @@ function showScene3() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (League 3PA)
     svg.selectAll('circle.lg3pa')
       .data(league)
       .enter().append('circle')
@@ -751,7 +703,7 @@ function showScene3() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yLeft(d['3PA']))
       .attr('r', 4)
-      .attr('fill', '#888888') // Changed to gray
+      .attr('fill', '#888888')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>League Avg 3PA: ${d['3PA'].toFixed(1)}`)
@@ -765,7 +717,6 @@ function showScene3() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (3P%)
     svg.selectAll('circle.pct3')
       .data(suns)
       .enter().append('circle')
@@ -788,24 +739,20 @@ function showScene3() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
 
-    // Legend (with lines)
     const legend = svg.append('g')
       .attr('transform', `translate(${plotWidth + 150}, 10)`);
-    // Suns 3PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
       .attr('stroke', '#1976d2').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 4)
       .text('Suns 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // League 3PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
-      .attr('stroke', '#888888').attr('stroke-width', 3); // Changed to gray, solid line
+      .attr('stroke', '#888888').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 28)
       .text('League Avg 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // 3P%
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
       .attr('stroke', '#ffb300').attr('stroke-width', 3)
@@ -817,7 +764,6 @@ function showScene3() {
       .attr('x', 0).attr('y', -10)
       .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
 
-    // Title
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -837,7 +783,7 @@ function showScene4() {
   const margin = {top: 40, right: 120, bottom: 50, left: 60};
   const width = plotWidth;
   const height = 400 - margin.top - margin.bottom;
-  const svgWidth = plotWidth + margin.left + margin.right + 400; // Increased from 300 to 400
+  const svgWidth = plotWidth + margin.left + margin.right + 400;
 
   const svg = d3.select('#viz').append('svg')
     .attr('width', svgWidth)
@@ -850,7 +796,6 @@ function showScene4() {
     d3.csv('data/rockets_pergame.csv'),
     d3.csv('data/league_stats.csv')
   ]).then(([warriorsData, rocketsData, leagueData]) => {
-    // Warriors: Filter for 2015–2020
     const warriors = warriorsData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -859,7 +804,6 @@ function showScene4() {
       d['3P%'] = d['3P%'] ? +d['3P%'] : null;
       return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
     });
-    // Rockets: Filter for 2015–2020
     const rockets = rocketsData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -868,33 +812,28 @@ function showScene4() {
       d['3P%'] = d['3P%'] ? +d['3P%'] : null;
       return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
     });
-    // League: Filter for 2015–2020
     const league = leagueData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
       d.year = year;
       d['3PA'] = +d['3PA'];
-      d['3P%'] = d['3P%'] ? +d['3P%'] : null; // Add 3P% for league
+      d['3P%'] = d['3P%'] ? +d['3P%'] : null;
       return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
     });
 
-    // X scale
     const x = d3.scaleLinear()
       .domain(d3.extent(warriors, d => d.year))
       .range([0, plotWidth]);
-    // Y scale for 3PA
     const yLeft = d3.scaleLinear()
-      .domain([0, d3.max([...warriors, ...rockets, ...league], d => d['3PA']) * 1.2]) // Increased from 1.1 to 1.2
+      .domain([0, d3.max([...warriors, ...rockets, ...league], d => d['3PA']) * 1.2])
       .range([height, 0]);
-    // Y scale for 3P%
     const yRight = d3.scaleLinear()
       .domain([
-        d3.min([...warriors, ...rockets, ...league], d => d['3P%']) * 0.95, // Start at 95% of min value
-        d3.max([...warriors, ...rockets, ...league], d => d['3P%']) * 1.15  // End at 115% of max value
+        d3.min([...warriors, ...rockets, ...league], d => d['3P%']) * 0.95,
+        d3.max([...warriors, ...rockets, ...league], d => d['3P%']) * 1.15
       ])
       .range([height, 0]);
 
-    // X axis
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues([2015, 2016, 2017, 2018, 2019, 2020]).tickFormat(d3.format('d')));
@@ -905,7 +844,6 @@ function showScene4() {
       .attr('fill', '#333')
       .text('Season');
 
-    // Y axis left
     svg.append('g')
       .call(d3.axisLeft(yLeft));
     svg.append('text')
@@ -916,7 +854,6 @@ function showScene4() {
       .attr('fill', '#333')
       .text('3PA (Left Axis)');
 
-    // Y axis right
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
       .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
@@ -928,7 +865,6 @@ function showScene4() {
       .attr('fill', '#333')
       .text('3P% (Right Axis)');
 
-    // Line generators
     const lineWarriors3PA = d3.line()
       .x(d => x(d.year))
       .y(d => yLeft(d['3PA']));
@@ -944,69 +880,66 @@ function showScene4() {
     const lineRockets3Ppct = d3.line()
       .x(d => x(d.year))
       .y(d => yRight(d['3P%']));
-    const lineLeague3Ppct = d3.line() // Add league 3P% line generator
+    const lineLeague3Ppct = d3.line()
       .x(d => x(d.year))
       .y(d => yRight(d['3P%']));
 
-    // Draw lines
     svg.append('path')
       .datum(warriors)
       .attr('fill', 'none')
-      .attr('stroke', '#4285F4') // Changed to blue
+      .attr('stroke', '#4285F4')
       .attr('stroke-width', 2.5)
       .attr('d', lineWarriors3PA);
     svg.append('path')
       .datum(rockets)
       .attr('fill', 'none')
-      .attr('stroke', '#DB4437') // Changed to red
+      .attr('stroke', '#DB4437')
       .attr('stroke-width', 2.5)
       .attr('d', lineRockets3PA);
     svg.append('path')
       .datum(league)
       .attr('fill', 'none')
-      .attr('stroke', '#888888') // Changed to gray
+      .attr('stroke', '#888888')
       .attr('stroke-width', 2.5)
       .attr('d', lineLeague3PA);
     svg.append('path')
       .datum(warriors)
       .attr('fill', 'none')
-      .attr('stroke', '#4285F4') // Changed to blue
+      .attr('stroke', '#4285F4')
       .attr('stroke-width', 2)
       .style('stroke-dasharray', '5 3')
       .attr('d', lineWarriors3Ppct);
     svg.append('path')
       .datum(rockets)
       .attr('fill', 'none')
-      .attr('stroke', '#DB4437') // Changed to red
+      .attr('stroke', '#DB4437')
       .attr('stroke-width', 2)
       .style('stroke-dasharray', '5 3')
       .attr('d', lineRockets3Ppct);
-    svg.append('path') // Add league 3P% line
+    svg.append('path')
       .datum(league)
       .attr('fill', 'none')
-      .attr('stroke', '#888888') // Changed to gray
+      .attr('stroke', '#888888')
       .attr('stroke-width', 2)
       .style('stroke-dasharray', '5 3')
       .attr('d', lineLeague3Ppct);
 
-    // Annotation for 2015–2020 (3-point revolution) - moved before tooltip circles
     svg.append('rect')
       .attr('x', x(2015))
       .attr('y', 0)
       .attr('width', x(2020) - x(2015))
       .attr('height', height)
-      .attr('fill', '#4285F4') // Changed to blue
+      .attr('fill', '#4285F4')
       .attr('opacity', 0.08);
     svg.append('text')
       .attr('x', x(2015) + (x(2020) - x(2015))/2)
       .attr('y', 30)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#4285F4') // Changed to blue
-      .attr('font-size', '0.9em') // Reduced from 1em to 0.9em
+      .attr('fill', '#4285F4')
+      .attr('font-size', '0.9em')
       .attr('font-weight', 'bold')
       .text('3-Point Revolution Era');
 
-    // Tooltip
     const tooltip = d3.select('#viz').append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
@@ -1017,7 +950,6 @@ function showScene4() {
       .style('pointer-events', 'none')
       .style('opacity', 0);
 
-    // Circles for tooltips (Warriors 3PA)
     svg.selectAll('circle.warriors3pa')
       .data(warriors)
       .enter().append('circle')
@@ -1025,7 +957,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yLeft(d['3PA']))
       .attr('r', 4)
-      .attr('fill', '#4285F4') // Changed to blue
+      .attr('fill', '#4285F4')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>Warriors 3PA: ${d['3PA'].toFixed(1)}`)
@@ -1039,7 +971,6 @@ function showScene4() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (Rockets 3PA)
     svg.selectAll('circle.rockets3pa')
       .data(rockets)
       .enter().append('circle')
@@ -1047,7 +978,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yLeft(d['3PA']))
       .attr('r', 4)
-      .attr('fill', '#DB4437') // Changed to red
+      .attr('fill', '#DB4437')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>Rockets 3PA: ${d['3PA'].toFixed(1)}`)
@@ -1061,7 +992,6 @@ function showScene4() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (League 3PA)
     svg.selectAll('circle.league3pa')
       .data(league)
       .enter().append('circle')
@@ -1069,7 +999,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yLeft(d['3PA']))
       .attr('r', 4)
-      .attr('fill', '#888888') // Changed to gray
+      .attr('fill', '#888888')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>League Avg 3PA: ${d['3PA'].toFixed(1)}`)
@@ -1083,7 +1013,7 @@ function showScene4() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (Warriors 3P%)
+
     svg.selectAll('circle.warriors3ppct')
       .data(warriors)
       .enter().append('circle')
@@ -1091,7 +1021,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yRight(d['3P%']))
       .attr('r', 4)
-      .attr('fill', '#4285F4') // Changed to blue
+      .attr('fill', '#4285F4')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>Warriors 3P%: ${(d['3P%']*100).toFixed(1)}%`)
@@ -1105,7 +1035,6 @@ function showScene4() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (Rockets 3P%)
     svg.selectAll('circle.rockets3ppct')
       .data(rockets)
       .enter().append('circle')
@@ -1113,7 +1042,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yRight(d['3P%']))
       .attr('r', 4)
-      .attr('fill', '#DB4437') // Changed to red
+      .attr('fill', '#DB4437')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>Rockets 3P%: ${(d['3P%']*100).toFixed(1)}%`)
@@ -1127,7 +1056,7 @@ function showScene4() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (League 3P%)
+
     svg.selectAll('circle.league3ppct')
       .data(league)
       .enter().append('circle')
@@ -1135,7 +1064,7 @@ function showScene4() {
       .attr('cx', d => x(d.year))
       .attr('cy', d => yRight(d['3P%']))
       .attr('r', 4)
-      .attr('fill', '#888888') // Changed to gray
+      .attr('fill', '#888888')
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(100).style('opacity', 1);
         tooltip.html(`<strong>${d.Season}</strong><br>League Avg 3P%: ${(d['3P%']*100).toFixed(1)}%`)
@@ -1150,51 +1079,44 @@ function showScene4() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
 
-    // Legend (with lines) - moved much further right
     const legend = svg.append('g')
-      .attr('transform', `translate(${plotWidth + 180}, 10)`); // Moved from 120 to 180
-    // Warriors 3PA
+      .attr('transform', `translate(${plotWidth + 180}, 10)`);
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
-      .attr('stroke', '#4285F4').attr('stroke-width', 3); // Changed to blue
+      .attr('stroke', '#4285F4').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 4)
       .text('Warriors 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // Rockets 3PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
-      .attr('stroke', '#DB4437').attr('stroke-width', 3); // Changed to red
+      .attr('stroke', '#DB4437').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 28)
       .text('Rockets 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // League 3PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
-      .attr('stroke', '#888888').attr('stroke-width', 3); // Changed to gray, solid line
+      .attr('stroke', '#888888').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 52)
       .text('League Avg 3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // Warriors 3P%
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 72).attr('y2', 72)
       .attr('stroke', '#4285F4').attr('stroke-width', 2)
-      .style('stroke-dasharray', '5 3'); // Changed to blue, keep dashed
+      .style('stroke-dasharray', '5 3');
     legend.append('text')
       .attr('x', 36).attr('y', 76)
       .text('Warriors 3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // Rockets 3P%
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 96).attr('y2', 96)
       .attr('stroke', '#DB4437').attr('stroke-width', 2)
-      .style('stroke-dasharray', '5 3'); // Changed to red, keep dashed
+      .style('stroke-dasharray', '5 3');
     legend.append('text')
       .attr('x', 36).attr('y', 100)
       .text('Rockets 3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // League 3P% - Add this new entry
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 120).attr('y2', 120)
       .attr('stroke', '#888888').attr('stroke-width', 2)
-      .style('stroke-dasharray', '5 3'); // Changed to gray, keep dashed
+      .style('stroke-dasharray', '5 3');
     legend.append('text')
       .attr('x', 36).attr('y', 124)
       .text('League Avg 3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
@@ -1202,7 +1124,6 @@ function showScene4() {
       .attr('x', 0).attr('y', -10)
       .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
 
-    // Title
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -1231,7 +1152,6 @@ function showScene5() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // Filter for 2020–Present (main data)
     const filtered = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -1242,7 +1162,6 @@ function showScene5() {
       return year >= 2020 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
     });
 
-    // Filter for 2000-2004 (reference data)
     const referenceData = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -1253,22 +1172,18 @@ function showScene5() {
       return year >= 2000 && year <= 2004 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
     });
 
-    // X scale (2020-2024)
     const x = d3.scaleLinear()
       .domain([2020, 2024])
       .range([0, plotWidth]);
     
-    // Y scale for attempts
     const yLeft = d3.scaleLinear()
       .domain([0, d3.max([...filtered, ...referenceData], d => Math.max(d['3PA'], d['2PA'])) * 1.1])
       .range([height, 0]);
     
-    // Y scale for 3P%
     const yRight = d3.scaleLinear()
       .domain([0, d3.max([...filtered, ...referenceData], d => d['3P%']) * 1.15])
       .range([height, 0]);
 
-    // X axis
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(x).tickValues([2020, 2021, 2022, 2023, 2024]).tickFormat(d3.format('d')));
@@ -1279,7 +1194,6 @@ function showScene5() {
       .attr('fill', '#333')
       .text('Season');
 
-    // Y axis left
     svg.append('g')
       .call(d3.axisLeft(yLeft));
     svg.append('text')
@@ -1290,7 +1204,6 @@ function showScene5() {
       .attr('fill', '#333')
       .text('Attempts per Game (Left Axis)');
 
-    // Y axis right
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
       .call(d3.axisRight(yRight).tickFormat(d3.format('.0%')));
@@ -1302,7 +1215,6 @@ function showScene5() {
       .attr('fill', '#333')
       .text('3P% (Right Axis)');
 
-    // Line generators
     const line3PA = d3.line()
       .x(d => x(d.year))
       .y(d => yLeft(d['3PA']));
@@ -1313,12 +1225,10 @@ function showScene5() {
       .x(d => x(d.year))
       .y(d => yRight(d['3P%']));
 
-    // Draw reference lines (2000-2004) - horizontal lines at average values
     const avg3PA2000s = d3.mean(referenceData, d => d['3PA']);
     const avg2PA2000s = d3.mean(referenceData, d => d['2PA']);
     const avg3Ppct2000s = d3.mean(referenceData, d => d['3P%']);
 
-    // Reference lines
     svg.append('line')
       .attr('x1', 0)
       .attr('x2', plotWidth)
@@ -1349,7 +1259,6 @@ function showScene5() {
       .attr('stroke-dasharray', '10 5')
       .attr('opacity', 0.6);
 
-    // Add labels for reference lines
     svg.append('text')
       .attr('x', plotWidth + 10)
       .attr('y', yLeft(avg3PA2000s) + 4)
@@ -1377,7 +1286,6 @@ function showScene5() {
       .attr('font-weight', 'bold')
       .text(`2000-2004 Avg 3P%: ${(avg3Ppct2000s*100).toFixed(1)}%`);
 
-    // Draw main lines (2020-2024)
     svg.append('path')
       .datum(filtered)
       .attr('fill', 'none')
@@ -1398,7 +1306,6 @@ function showScene5() {
       .style('stroke-dasharray', '5 3')
       .attr('d', line3Ppct);
 
-    // Annotation for 2020–Present (3-point boom) - moved before tooltip circles
     svg.append('rect')
       .attr('x', x(2020))
       .attr('y', 0)
@@ -1415,7 +1322,6 @@ function showScene5() {
       .attr('font-weight', 'bold')
       .text('3-Point Boom Era');
 
-    // Tooltip
     const tooltip = d3.select('#viz').append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
@@ -1426,7 +1332,6 @@ function showScene5() {
       .style('pointer-events', 'none')
       .style('opacity', 0);
 
-    // Circles for tooltips (3PA)
     svg.selectAll('circle.pa3')
       .data(filtered)
       .enter().append('circle')
@@ -1448,7 +1353,6 @@ function showScene5() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (2PA)
     svg.selectAll('circle.pa2')
       .data(filtered)
       .enter().append('circle')
@@ -1470,7 +1374,6 @@ function showScene5() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
-    // Circles for tooltips (3P%)
     svg.selectAll('circle.pct3')
       .data(filtered)
       .enter().append('circle')
@@ -1493,24 +1396,20 @@ function showScene5() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
 
-    // Legend (with lines)
     const legend = svg.append('g')
       .attr('transform', `translate(${plotWidth + 200}, 10)`);
-    // 3PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 0).attr('y2', 0)
       .attr('stroke', '#1976d2').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 4)
       .text('3PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // 2PA
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 24).attr('y2', 24)
       .attr('stroke', '#43a047').attr('stroke-width', 3);
     legend.append('text')
       .attr('x', 36).attr('y', 28)
       .text('2PA (Left Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // 3P%
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 48).attr('y2', 48)
       .attr('stroke', '#ffb300').attr('stroke-width', 3)
@@ -1518,7 +1417,6 @@ function showScene5() {
     legend.append('text')
       .attr('x', 36).attr('y', 52)
       .text('3P% (Right Axis)').attr('fill', '#333').attr('font-size', '1em');
-    // Reference lines - individual entries
     legend.append('line')
       .attr('x1', 0).attr('x2', 30).attr('y1', 72).attr('y2', 72)
       .attr('stroke', '#1976d2').attr('stroke-width', 1.5)
@@ -1544,7 +1442,6 @@ function showScene5() {
       .attr('x', 0).attr('y', -10)
       .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
 
-    // Title
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -1560,11 +1457,10 @@ function showScene5() {
     .html('This chart shows the 3-point boom from 2020-2024 with horizontal reference lines showing the average values from 2000-2004. The dramatic increase in 3PA and decrease in 2PA demonstrates how the game has fundamentally changed. Hover over points to see current values compared to the 2000-2004 averages.');
 }
 function showScene6() {
-  const margin = {top: 20, right: 20, bottom: 120, left: 60}; // Increased bottom margin from 80 to 120
+  const margin = {top: 20, right: 20, bottom: 120, left: 60};
   const width = 900 - margin.left - margin.right;
-  const height = 450 - margin.top - margin.bottom; // Increased height from 400 to 450
+  const height = 450 - margin.top - margin.bottom;
 
-  // Create main container for the dashboard
   const dashboard = d3.select('#viz')
     .append('div')
     .style('display', 'grid')
@@ -1573,7 +1469,6 @@ function showScene6() {
     .style('gap', '20px')
     .style('padding', '20px');
 
-  // Panel 1: Top 10 3PT Shooters
   const panel1 = dashboard.append('div')
     .style('grid-column', '1')
     .style('grid-row', '1')
@@ -1588,7 +1483,6 @@ function showScene6() {
     .style('color', '#333')
     .style('font-size', '1.2em');
 
-  // Panel 2: Top 3PT Teams by Year
   const panel2 = dashboard.append('div')
     .style('grid-column', '2')
     .style('grid-row', '1')
@@ -1603,7 +1497,6 @@ function showScene6() {
     .style('color', '#333')
     .style('font-size', '1.2em');
 
-  // Add sort selector for teams
   const teamSortSelector = panel2.append('div')
     .style('margin-bottom', '15px');
 
@@ -1630,7 +1523,6 @@ function showScene6() {
     .text(d => d.label)
     .property('selected', d => d.value === '3PA');
 
-  // Load data for all panels
   Promise.all([
     d3.csv('data/Team_Stats_Per_Game.csv'),
     d3.csv('data/league_stats.csv'),
@@ -1638,7 +1530,6 @@ function showScene6() {
     d3.csv('data/Player_Per_Game.csv')
   ]).then(([teamData, leagueData, playerShootingData, playerPerGameData]) => {
     
-    // Panel 2: Top 3PT Teams by Year
     const teamDataFiltered = teamData.filter(d => {
       if (!d.season) return false;
       const year = parseInt(d.season.split('-')[0]);
@@ -1648,42 +1539,30 @@ function showScene6() {
       d['3PM'] = +d.x3p_per_game;
       d.Team = d.team;
       d.Season = d.season;
-      // Filter out "League Average" and ensure valid data
       return year >= 2020 && d['3PA'] != null && d['3P%'] != null && 
              d.Team && d.Team !== 'League Average' && d.Team !== 'League';
     });
 
-    console.log('Team data sample:', teamDataFiltered.slice(0, 3));
-    console.log('Team years available:', [...new Set(teamDataFiltered.map(d => d.year))].sort());
-
-    // Function to update team table
     function updateTeamTable(sortBy = '3PA') {
-      console.log('Updating team table sorted by:', sortBy);
-      
-      // Clear existing table and annotation
       panel2.selectAll('table').remove();
       panel2.selectAll('.team-filter-note').remove();
 
-      // Filter teams based on sort criteria
       let filteredTeams = teamDataFiltered;
       if (sortBy === '3P%') {
-        filteredTeams = teamDataFiltered.filter(d => d['3PA'] >= 30); // Minimum 30 team 3PA for meaningful percentage
+        filteredTeams = teamDataFiltered.filter(d => d['3PA'] >= 30);
       }
 
-      // Group by year and get top 5 teams per year
       const teamsByYear = {};
       filteredTeams.forEach(d => {
         if (!teamsByYear[d.year]) teamsByYear[d.year] = [];
         teamsByYear[d.year].push(d);
       });
 
-      // Sort teams by selected metric within each year and take top 5
       Object.keys(teamsByYear).forEach(year => {
         teamsByYear[year].sort((a, b) => b[sortBy] - a[sortBy]);
         teamsByYear[year] = teamsByYear[year].slice(0, 5);
       });
 
-      // Add annotation for 3P% filter
       if (sortBy === '3P%') {
         panel2.append('p')
           .attr('class', 'team-filter-note')
@@ -1699,7 +1578,6 @@ function showScene6() {
         .style('border-collapse', 'collapse')
         .style('font-size', '0.9em');
 
-      // Header
       teamTable.append('thead').append('tr')
         .selectAll('th')
         .data(['Year', 'Team', '3PA', '3P%', '3PM'])
@@ -1710,7 +1588,6 @@ function showScene6() {
         .style('border-bottom', '2px solid #dee2e6')
         .style('background', '#e9ecef');
 
-      // Rows
       const teamTbody = teamTable.append('tbody');
       const teamRows = [];
       Object.keys(teamsByYear).sort().forEach(year => {
@@ -1730,14 +1607,12 @@ function showScene6() {
         .data(teamRows)
         .enter().append('tr')
         .style('background', (d, i) => {
-          // Check if this is the first row of a new year
           if (i === 0 || teamRows[i-1].year !== d.year) {
-            return '#e3f2fd'; // Light blue background for year headers
+            return '#e3f2fd';
           }
           return i % 2 === 0 ? '#f8f9fa' : 'white';
         })
         .style('border-top', (d, i) => {
-          // Add bold line between years
           if (i === 0 || teamRows[i-1].year !== d.year) {
             return '2px solid #1976d2';
           }
@@ -1757,23 +1632,18 @@ function showScene6() {
         .style('padding', '6px 8px')
         .style('border-bottom', '1px solid #dee2e6')
         .style('font-weight', (d, i, nodes) => {
-          // Make year column bold for first row of each year
-          const rowIndex = Math.floor(i / 5); // 5 teams per year
+          const rowIndex = Math.floor(i / 5);
           const isFirstInYear = i % 5 === 0;
           return isFirstInYear ? 'bold' : 'normal';
         });
     }
 
-    // Initial team table
     updateTeamTable('3PA');
 
-    // Update team table when sort changes
     teamSortSelect.on('change', function() {
-      console.log('Team sort changed to:', this.value);
       updateTeamTable(this.value);
     });
 
-    // Panel 3: Team 3PT by Year (Full width)
     const panel3 = dashboard.append('div')
       .style('grid-column', '1 / -1')
       .style('grid-row', '2')
@@ -1788,7 +1658,6 @@ function showScene6() {
       .style('color', '#333')
       .style('font-size', '1.2em');
 
-    // Process player data
     const playerData = playerShootingData.map(shooting => {
       const perGame = playerPerGameData.find(pg => 
         pg.player === shooting.player && pg.season === shooting.season
@@ -1799,9 +1668,6 @@ function showScene6() {
       };
     }).filter(d => d.player && d.season && d.x3pa_per_game && d.x3p_percent);
 
-    console.log('Player data sample:', playerData.slice(0, 3));
-
-    // Filter and process player data
     const processedPlayerData = playerData.filter(d => {
       if (!d.season) return false;
       const year = parseInt(d.season.split('-')[0]);
@@ -1815,16 +1681,9 @@ function showScene6() {
       return d['3PA'] != null && d['3P%'] != null && d['3PA'] > 0;
     });
 
-    console.log('Processed player data sample:', processedPlayerData.slice(0, 3));
-
-    // Get available years for player data
     const playerYears = [...new Set(processedPlayerData.map(d => d.year))].sort();
     const defaultYear = playerYears.includes(2025) ? 2025 : Math.max(...playerYears);
 
-    console.log('Available years:', playerYears);
-    console.log('Default year:', defaultYear);
-
-    // Year selector for players
     const playerYearSelector = panel1.append('div')
       .style('margin-bottom', '15px');
 
@@ -1839,7 +1698,6 @@ function showScene6() {
       .style('border', '1px solid #ccc')
       .style('margin-right', '15px');
 
-    // Populate dropdown options
     playerSelect.selectAll('option')
       .data(playerYears)
       .enter().append('option')
@@ -1847,7 +1705,6 @@ function showScene6() {
       .text(d => d)
       .property('selected', d => d === defaultYear);
 
-    // Sort by selector for players
     playerYearSelector.append('label')
       .text('Sort by: ')
       .style('margin-right', '10px')
@@ -1871,19 +1728,11 @@ function showScene6() {
       .text(d => d.label)
       .property('selected', d => d.value === '3PA');
 
-    console.log('Dropdown populated with years:', playerYears);
-
-    // Function to update player table
     function updatePlayerTable(selectedYear, sortBy = '3PA') {
-      console.log('Updating player table for year:', selectedYear, 'sort by:', sortBy);
-      
-      // Clear existing table
       panel1.selectAll('table').remove();
 
-      // Filter players for selected year
       let yearPlayers = processedPlayerData.filter(d => d.year === selectedYear);
       
-      // Remove duplicates (keep first occurrence of each player)
       const seen = new Set();
       yearPlayers = yearPlayers.filter(d => {
         const key = `${d.Player}-${d.year}`;
@@ -1894,18 +1743,13 @@ function showScene6() {
         return true;
       });
       
-      // Apply minimum 3PA filter when sorting by 3P%
       if (sortBy === '3P%') {
         yearPlayers = yearPlayers.filter(d => d['3PA'] >= 5);
-        console.log('Filtered to players with 5+ 3PA:', yearPlayers.length);
       }
 
-      // Get top 10 by selected metric
       yearPlayers = yearPlayers
         .sort((a, b) => b[sortBy] - a[sortBy])
         .slice(0, 10);
-
-      console.log('Players for year', selectedYear, 'sorted by', sortBy, ':', yearPlayers.length);
 
       if (yearPlayers.length === 0) {
         panel1.append('p')
@@ -1920,7 +1764,6 @@ function showScene6() {
         .style('border-collapse', 'collapse')
         .style('font-size', '0.9em');
 
-      // Header
       shooterTable.append('thead').append('tr')
         .selectAll('th')
         .data(['Rank', 'Player', 'Team', '3PA', '3P%', '3PM'])
@@ -1931,7 +1774,6 @@ function showScene6() {
         .style('border-bottom', '2px solid #dee2e6')
         .style('background', '#e9ecef');
 
-      // Rows
       const tbody = shooterTable.append('tbody');
       const rows = tbody.selectAll('tr')
         .data(yearPlayers)
@@ -1962,12 +1804,9 @@ function showScene6() {
         .style('border-bottom', '1px solid #dee2e6');
     }
 
-    // Function to update annotation
     function updateAnnotation(sortBy) {
-      // Remove existing annotation
       panel1.selectAll('.filter-note').remove();
       
-      // Add annotation only for 3P% filter
       if (sortBy === '3P%') {
         panel1.append('p')
           .attr('class', 'filter-note')
@@ -1979,33 +1818,26 @@ function showScene6() {
       }
     }
 
-    // Initial player table
     updatePlayerTable(defaultYear, '3PA');
     updateAnnotation('3PA');
 
-    // Update player table when year or sort changes
     playerSelect.on('change', function() {
-      console.log('Year changed to:', this.value);
       const currentSort = sortSelect.property('value');
       updatePlayerTable(+this.value, currentSort);
-      // Don't update annotation here - keep it for the same filter
     });
 
     sortSelect.on('change', function() {
-      console.log('Sort changed to:', this.value);
       const currentYear = +playerSelect.property('value');
       updatePlayerTable(currentYear, this.value);
-      updateAnnotation(this.value); // Update annotation when filter changes
+      updateAnnotation(this.value);
     });
 
-    // Panel 3: Interactive Team 3PT Chart
     const svg = panel3.append('svg')
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Year selector
     const yearSelector = panel3.append('div')
       .style('margin-bottom', '15px');
 
@@ -2021,7 +1853,6 @@ function showScene6() {
       .style('margin-right', '15px');
 
     const years = [...new Set(teamDataFiltered.map(d => d.year))].sort();
-    console.log('Team years available:', years);
 
     if (years.length === 0) {
       yearSelector.append('p')
@@ -2035,7 +1866,6 @@ function showScene6() {
         .attr('value', d => d)
         .text(d => d);
 
-      // Sort selector for chart
       yearSelector.append('label')
         .text('Sort by: ')
         .style('margin-right', '10px')
@@ -2059,35 +1889,25 @@ function showScene6() {
         .text(d => d.label)
         .property('selected', d => d.value === '3PA');
 
-      // Initial chart
       updateTeamChart(years[0], '3PA');
 
-      // Update chart when year or sort changes
       select.on('change', function() {
-        console.log('Team chart year changed to:', this.value);
         updateTeamChart(+this.value, chartSortSelect.property('value'));
       });
 
       chartSortSelect.on('change', function() {
-        console.log('Team chart sort changed to:', this.value);
         updateTeamChart(+select.property('value'), this.value);
       });
     }
 
     function updateTeamChart(selectedYear, sortBy = '3PA') {
-      console.log('Updating team chart for year:', selectedYear, 'sort by:', sortBy);
-      
-      // Clear existing annotation
       panel3.selectAll('.chart-filter-note').remove();
       
       let yearData = teamDataFiltered.filter(d => d.year === selectedYear);
       
-      // Apply minimum 3PA filter when sorting by 3P%
       if (sortBy === '3P%') {
         yearData = yearData.filter(d => d['3PA'] >= 30);
-        console.log('Filtered to teams with 30+ 3PA:', yearData.length);
         
-        // Add annotation for 3P% filter
         panel3.append('p')
           .attr('class', 'chart-filter-note')
           .text('Note: Only teams with 30+ 3PA per game are shown for meaningful percentage comparisons')
@@ -2099,11 +1919,8 @@ function showScene6() {
       
       yearData = yearData
         .sort((a, b) => b[sortBy] - a[sortBy])
-        .slice(0, 15); // Top 15 teams
+        .slice(0, 15);
 
-      console.log('Teams for year', selectedYear, 'sorted by', sortBy, ':', yearData.length);
-
-      // Clear previous chart
       svg.selectAll('*').remove();
 
       if (yearData.length === 0) {
@@ -2117,16 +1934,14 @@ function showScene6() {
         return;
       }
 
-      // Process data - convert 3P% to whole numbers for display
       yearData = yearData.map(d => {
         const processed = {...d};
         if (sortBy === '3P%') {
-          processed['3P%_display'] = d['3P%'] * 100; // Convert to whole numbers
+          processed['3P%_display'] = d['3P%'] * 100;
         }
         return processed;
       });
 
-      // Scales
       const x = d3.scaleBand()
         .domain(yearData.map(d => d.Team))
         .range([0, width])
@@ -2135,15 +1950,14 @@ function showScene6() {
       const y = d3.scaleLinear()
         .domain([
           sortBy === '3P%' 
-            ? d3.min(yearData, d => d['3P%_display']) * 0.95  // Use converted 3P% values
-            : 0,  // Start at 0 for 3PA and 3PM
+            ? d3.min(yearData, d => d['3P%_display']) * 0.95
+            : 0,
           sortBy === '3P%'
-            ? d3.max(yearData, d => d['3P%_display']) * 1.05  // Use converted 3P% values
+            ? d3.max(yearData, d => d['3P%_display']) * 1.05
             : d3.max(yearData, d => d[sortBy]) * 1.05
         ])
         .range([height, 0]);
 
-      // X axis
       svg.append('g')
         .attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x))
@@ -2152,13 +1966,11 @@ function showScene6() {
         .attr('dx', '-.8em')
         .attr('dy', '.15em')
         .attr('transform', 'rotate(-45)')
-        .style('font-size', '10px'); // Smaller font size
+        .style('font-size', '10px');
 
-      // Y axis (left only, whole numbers)
       svg.append('g')
         .call(d3.axisLeft(y).tickFormat(d3.format('d')));
 
-      // Bars
       svg.selectAll('rect')
         .data(yearData)
         .enter().append('rect')
@@ -2177,7 +1989,6 @@ function showScene6() {
           hideTooltip();
         });
 
-      // Title
       svg.append('text')
         .attr('x', width / 2)
         .attr('y', -5)
@@ -2186,7 +1997,6 @@ function showScene6() {
         .style('font-weight', 'bold')
         .text(`Top 15 Teams by ${sortBy} - ${selectedYear}`);
 
-      // Y axis label
       const yAxisLabels = {
         '3PA': '3PA per Game',
         '3P%': '3P% (Whole Numbers)',
@@ -2202,7 +2012,6 @@ function showScene6() {
         .text(yAxisLabels[sortBy] || 'Value');
     }
 
-    // Tooltip
     const tooltip = d3.select('#viz').append('div')
       .attr('class', 'tooltip')
       .style('position', 'absolute')
@@ -2233,9 +2042,7 @@ function showScene6() {
       tooltip.transition().duration(500).style('opacity', 0);
     }
 
-    // Player details modal
     function showPlayerDetails(player) {
-      // Remove existing modal
       d3.selectAll('.player-modal').remove();
 
       const modal = d3.select('body').append('div')
@@ -2283,7 +2090,6 @@ function showScene6() {
         .html(`<strong>3PM per Game:</strong> ${player['3PM'] ? player['3PM'].toFixed(1) : 'N/A'}`)
         .style('margin', '10px 0');
 
-      // Add additional stats if available
       if (player.G) {
         modalContent.append('p')
           .html(`<strong>Games Played:</strong> ${player.G}`)
@@ -2307,7 +2113,6 @@ function showScene6() {
         .style('cursor', 'pointer')
         .on('click', () => modal.remove());
 
-      // close on background click
       modal.on('click', function(event) {
         if (event.target === this) modal.remove();
       });
@@ -2319,5 +2124,4 @@ function showScene6() {
     .html('Explore the data! Use the year selectors to see different seasons. Click on players in the top 10 list to see detailed stats. The interactive dashboard shows real player and team data from your CSV files. Discover who the top 3-point shooters were in different years and how teams ranked in 3-point shooting.');
 }
 
-// Initialize
 renderScene(); 
