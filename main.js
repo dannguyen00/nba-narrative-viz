@@ -1,4 +1,4 @@
-// Helper functions for common plotting logic
+// helper functions
 function createTooltip() {
   return d3.select('#viz').append('div')
     .attr('class', 'tooltip')
@@ -13,11 +13,12 @@ function createTooltip() {
     .style('font-size', '12px');
 }
 
+// make line curve
 function createLineGenerator(x, y) {
   return d3.line()
     .x(d => x(d.year))
     .y(d => y(d.value))
-    .curve(d3.curveMonotoneX); // Smooth curve
+    .curve(d3.curveMonotoneX);
 }
 
 function animateLine(path, duration = 1000) {
@@ -227,7 +228,7 @@ function showScene1() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // Filter for 1979-80 onward and valid 3PA
+    // filter for 1979-80 onward and valid 3pa
     const filtered = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -237,7 +238,7 @@ function showScene1() {
       return year >= 1980 && d['3PA'] != null && d['3PA'] !== '';
     });
 
-    // X and Y scales
+    // scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, width]);
@@ -246,13 +247,13 @@ function showScene1() {
       .domain([0, d3.max(filtered, d => d['3PA']) * 1.1])
       .range([height, 0]);
 
-    // Create axes with transitions
+    // create axes with transitions
     const { xAxis, yAxis } = createAxisWithTransitions(svg, x, y, width, height, margin);
     
     xAxis.call(d3.axisBottom(x).tickFormat(d3.format('d')));
     yAxis.call(d3.axisLeft(y));
 
-    // Axis labels with transitions
+    // axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
@@ -278,10 +279,10 @@ function showScene1() {
       .delay(300)
       .style('opacity', 1);
 
-    // Prepare data for line
+    // prepare data for line
     const lineData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
 
-    // Create line with animation
+    // create line with animation
     const line = createLineGenerator(x, y);
     const path = svg.append('path')
       .datum(lineData)
@@ -290,20 +291,20 @@ function showScene1() {
       .attr('stroke-width', 2.5)
       .attr('d', line);
 
-    // Animate the line
+    // animate the line
     animateLine(path, 1500);
 
-    // Create tooltip
+    // create tooltip
     const tooltip = createTooltip();
     tooltip.content = (d) => {
       const originalData = filtered.find(item => item.year === d.year);
       return `<strong>${originalData.Season}</strong><br>3PA: ${originalData['3PA'].toFixed(1)}<br>3P%: ${originalData['3P%'] ? (originalData['3P%']*100).toFixed(1)+'%' : 'N/A'}`;
     };
 
-    // Create interactive circles
+    // create interactive circles
     createInteractiveCircle(svg, lineData, x, y, '#ffb300', 4, tooltip, 'value', 'scene1-circles');
 
-    // Annotations with transitions
+    // annotations with transitions
     const annotations = [
       {
         note: { label: '3-point line introduced', align: 'middle' },
@@ -322,7 +323,7 @@ function showScene1() {
       }
     ].filter(a => a.data);
 
-    // Add annotations with delays
+    // add annotations with delays
     annotations.forEach((annotation, i) => {
       setTimeout(() => {
         const makeAnnotations = d3.annotation()
@@ -348,7 +349,7 @@ function showScene1() {
       }, 1000 + (i * 300));
     });
 
-    // Title with transition
+    // title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -387,7 +388,7 @@ function showScene2() {
     .attr('transform', `translate(${margin.left},${margin.top})`);
 
   d3.csv('data/league_stats.csv').then(data => {
-    // Filter for 1990-2000
+    // filter for 1990-2000
     const filtered = data.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -398,7 +399,7 @@ function showScene2() {
       return year >= 1990 && year <= 2000 && d['3PA'] != null && d['3P%'] != null && d['2PA'] != null;
     });
 
-    // Scales
+    // scales
     const x = d3.scaleLinear()
       .domain(d3.extent(filtered, d => d.year))
       .range([0, plotWidth]);
@@ -411,13 +412,13 @@ function showScene2() {
       .domain([0, d3.max(filtered, d => d['3P%']) * 1.15])
       .range([height, 0]);
 
-    // Create axes with transitions
+    // create axes with transitions
     const { xAxis, yAxis } = createAxisWithTransitions(svg, x, yLeft, width, height, margin);
     
     xAxis.call(d3.axisBottom(x).tickValues([1990, 1992, 1994, 1996, 1998, 2000]).tickFormat(d3.format('d')));
     yAxis.call(d3.axisLeft(yLeft));
 
-    // Right Y axis
+    // right y axis
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
       .style('opacity', 0)
@@ -427,7 +428,7 @@ function showScene2() {
       .delay(300)
       .style('opacity', 1);
 
-    // Axis labels with transitions
+    // axis labels with transitions
     svg.append('text')
       .attr('x', width/2)
       .attr('y', height + margin.bottom - 10)
@@ -466,17 +467,17 @@ function showScene2() {
       .delay(400)
       .style('opacity', 1);
 
-    // Prepare data for lines
+    // prepare data for lines
     const line3PAData = filtered.map(d => ({ year: d.year, value: d['3PA'] }));
     const line2PAData = filtered.map(d => ({ year: d.year, value: d['2PA'] }));
     const line3PpctData = filtered.map(d => ({ year: d.year, value: d['3P%'] }));
 
-    // Create lines with animations
+    // create lines with animations
     const line3PA = createLineGenerator(x, yLeft);
     const line2PA = createLineGenerator(x, yLeft);
     const line3Ppct = createLineGenerator(x, yRight);
 
-    // Draw lines with staggered animations
+    // draw lines with staggered animations
     const path3PA = svg.append('path')
       .datum(line3PAData)
       .attr('fill', 'none')
@@ -499,20 +500,16 @@ function showScene2() {
       .style('stroke-dasharray', '5 3')
       .attr('d', line3Ppct);
 
-    // Animate lines with delays
+    // animate lines with delays
     setTimeout(() => animateLine(path3PA, 1000), 500);
     setTimeout(() => animateLine(path2PA, 1000), 1000);
     setTimeout(() => animateLine(path3Ppct, 1000), 1500);
 
-    // Create annotation with transition
+    // create annotation with transition
     createAnnotation(svg, { start: x(1994), end: x(1997) }, height, '3PT Line Shortened', '#ffb300');
     createAnnotationText(svg, x(1994) + (x(1997) - x(1994))/2, 30, '3PT Line Shortened', '#ffb300');
 
-    // Create tooltip
-    const tooltip = createTooltip();
-    tooltip.content = (d) => `<strong>${d.Season || d.year}</strong><br>3PA: ${d['3PA'] || d.value.toFixed(1)}`;
-
-    // Create interactive circles with different colors and proper tooltips
+    // create interactive circles with different colors and proper tooltips
     setTimeout(() => {
       const tooltip3PA = createTooltip();
       tooltip3PA.content = (d) => {
@@ -520,7 +517,7 @@ function showScene2() {
         return `<strong>${originalData.Season}</strong><br>3PA: ${originalData['3PA'].toFixed(1)}`;
       };
       createInteractiveCircle(svg, line3PAData, x, yLeft, '#1976d2', 5, tooltip3PA, 'value', 'scene2-3pa-circles');
-    }, 1000); // Reduced delay
+    }, 1000);
     
     setTimeout(() => {
       const tooltip2PA = createTooltip();
@@ -529,7 +526,7 @@ function showScene2() {
         return `<strong>${originalData.Season}</strong><br>2PA: ${originalData['2PA'].toFixed(1)}`;
       };
       createInteractiveCircle(svg, line2PAData, x, yLeft, '#43a047', 5, tooltip2PA, 'value', 'scene2-2pa-circles');
-    }, 1100); // Reduced delay
+    }, 1100);
     
     setTimeout(() => {
       const tooltip3Ppct = createTooltip();
@@ -538,9 +535,9 @@ function showScene2() {
         return `<strong>${originalData.Season}</strong><br>3P%: ${(originalData['3P%']*100).toFixed(1)}%`;
       };
       createInteractiveCircle(svg, line3PpctData, x, yRight, '#ffb300', 5, tooltip3Ppct, 'value', 'scene2-3ppct-circles');
-    }, 1200); // Reduced delay
+    }, 1200);
 
-    // Create legend with transitions
+    // create legend with transitions
     const legendData = [
       { color: '#1976d2', label: '3PA (Left Axis)' },
       { color: '#43a047', label: '2PA (Left Axis)' },
@@ -549,7 +546,7 @@ function showScene2() {
 
     setTimeout(() => createLegend(svg, legendData, plotWidth, margin), 3500);
 
-    // Title with transition
+    // title with transition
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -591,7 +588,7 @@ function showScene3() {
     d3.csv('data/suns_pergame.csv'),
     d3.csv('data/league_stats.csv')
   ]).then(([sunsData, leagueData]) => {
-    // Suns: Filter for 2000–2010
+    // suns: filter for 2000–2010
     const suns = sunsData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -601,7 +598,7 @@ function showScene3() {
       d['MP'] = +d['MP'];
       return year >= 2000 && year <= 2010 && d['3PA'] != null && d['3P%'] != null && d['MP'] != null;
     });
-    // League: Filter for 2000–2010
+    // league: filter for 2000–2010
     const league = leagueData.filter(d => {
       if (!d.Season) return false;
       const year = parseInt(d.Season.split('-')[0]);
@@ -609,7 +606,7 @@ function showScene3() {
       d['3PA'] = +d['3PA'];
       return year >= 2000 && year <= 2010 && d['3PA'] != null;
     });
-    // Map league by year for tooltip
+    // map league by year for tooltip
     const leagueByYear = {};
     league.forEach(d => { leagueByYear[d.year] = d; });
 
@@ -2310,7 +2307,7 @@ function showScene6() {
         .style('cursor', 'pointer')
         .on('click', () => modal.remove());
 
-      // Close on background click
+      // close on background click
       modal.on('click', function(event) {
         if (event.target === this) modal.remove();
       });
@@ -2322,5 +2319,5 @@ function showScene6() {
     .html('Explore the data! Use the year selectors to see different seasons. Click on players in the top 10 list to see detailed stats. The interactive dashboard shows real player and team data from your CSV files. Discover who the top 3-point shooters were in different years and how teams ranked in 3-point shooting.');
 }
 
-// --- Initialize ---
+// Initialize
 renderScene(); 
