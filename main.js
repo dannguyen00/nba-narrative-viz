@@ -338,7 +338,7 @@ function showScene1() {
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
       .style('opacity', 0)
-      .text('NBA League Average 3-Point Attempts per Game (1980–Present)')
+      .text('NBA League Average 3-Point Attempts per Game (1980-Present)')
       .transition()
       .duration(500)
       .delay(100)
@@ -348,7 +348,7 @@ function showScene1() {
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
     .style('opacity', 0)
-    .html('The NBA introduced the 3-point line in 1979-80. Since then, 3-point attempts have steadily increased, with major jumps in the mid-1990s and the 2010s. Hover over points for details.')
+    .html('The NBA introduced the 3-point line for the 1979-80 season. Since then, 3-point attempts have steadily increased, with major jumps during certain eras. In this visualization, we will explore the evolution of how 3-point shooting has dominated the NBA over time. Hover over points for details.')
     .transition()
     .duration(500)
     .delay(800)
@@ -423,7 +423,7 @@ function showScene2() {
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
       .style('opacity', 0)
-      .text('Attempts per Game (Left Axis)')
+      .text('Attempts per Game')
       .transition()
       .duration(500)
       .delay(400)
@@ -436,7 +436,7 @@ function showScene2() {
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
       .style('opacity', 0)
-      .text('3P% (Right Axis)')
+      .text('3-Point Percentage (%)')
       .transition()
       .duration(500)
       .delay(400)
@@ -522,7 +522,7 @@ function showScene2() {
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
       .style('opacity', 0)
-      .text('NBA 3PA, 2PA, and 3P% (1990–2000)')
+      .text('NBA League Average 3PA, 2PA, and 3P% (1990-2000)')
       .transition()
       .duration(500)
       .delay(100)
@@ -532,7 +532,7 @@ function showScene2() {
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
     .style('opacity', 0)
-    .html('From 1994–1997, the NBA shortened the 3-point line to encourage more attempts. This chart compares 3PA, 2PA, and 3P% during the 1990s. Hover over points for details.')
+    .html('From 1994-1997, the NBA shortened the 3-point line to encourage more three point attempts. This chart compares 3PA, 2PA, and 3P% during the 1990s. As we can see, during that period, the number of three-point attempts and percentage increased, showing hope that the 3-point line was here to stay.')
     .transition()
     .duration(500)
     .delay(800)
@@ -605,7 +605,7 @@ function showScene3() {
       .attr('y', -margin.left + 18)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3PA (Left Axis)');
+      .text('3-Point Attempts per Game');
 
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
@@ -616,7 +616,7 @@ function showScene3() {
       .attr('y', width + margin.right - 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3P% (Right Axis)');
+      .text('3-Point Percentage (%)');
 
     const lineSuns3PA = d3.line()
       .x(d => x(d.year))
@@ -696,6 +696,7 @@ function showScene3() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
+
     svg.selectAll('circle.lg3pa')
       .data(league)
       .enter().append('circle')
@@ -717,6 +718,7 @@ function showScene3() {
       .on('mouseout', function() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
+
     svg.selectAll('circle.pct3')
       .data(suns)
       .enter().append('circle')
@@ -771,12 +773,12 @@ function showScene3() {
       .attr('font-size', '1.3em')
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
-      .text('Phoenix Suns vs. League: 3PA and 3P% (2000–2010)');
+      .text('Phoenix Suns Fast Pace Offense (2000-2010)');
   });
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('From 2004-2010, the Suns popularized the "7 seconds or less" offense, playing at a fast pace and shooting more threes. This chart compares Suns 3PA, league average 3PA, and Suns 3P%. Hover over points for details. Minutes played (MP) is shown in the tooltip for Suns.');
+    .html('From 2004-2010, the Suns popularized the "7 seconds or less" offense, which revolved around playing at a faster pace and shooting more threes. This chart compares the Suns 3PA, league average 3PA, and Suns 3P%. As we can see in the graph, the Suns consistently shot more threes than the league average at a high percentage, persuading other teams to adopt this style of play.');
 }
 function showScene4() {
   const plotWidth = 760;
@@ -821,6 +823,7 @@ function showScene4() {
       return year >= 2015 && year <= 2020 && d['3PA'] != null && d['3P%'] != null;
     });
 
+
     const x = d3.scaleLinear()
       .domain(d3.extent(warriors, d => d.year))
       .range([0, plotWidth]);
@@ -833,6 +836,7 @@ function showScene4() {
         d3.max([...warriors, ...rockets, ...league], d => d['3P%']) * 1.15
       ])
       .range([height, 0]);
+
 
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
@@ -852,7 +856,7 @@ function showScene4() {
       .attr('y', -margin.left + 18)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3PA (Left Axis)');
+      .text('3-Point Attempts per Game');
 
     svg.append('g')
       .attr('transform', `translate(${width},0)`)
@@ -863,7 +867,7 @@ function showScene4() {
       .attr('y', width + margin.right - 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#333')
-      .text('3P% (Right Axis)');
+      .text('3-Point Percentage (%)');
 
     const lineWarriors3PA = d3.line()
       .x(d => x(d.year))
@@ -1079,6 +1083,7 @@ function showScene4() {
         tooltip.transition().duration(200).style('opacity', 0);
       });
 
+
     const legend = svg.append('g')
       .attr('transform', `translate(${plotWidth + 180}, 10)`);
     legend.append('line')
@@ -1124,6 +1129,7 @@ function showScene4() {
       .attr('x', 0).attr('y', -10)
       .text('Legend:').attr('font-weight', 'bold').attr('fill', '#333');
 
+
     svg.append('text')
       .attr('x', width/2)
       .attr('y', -16)
@@ -1131,12 +1137,12 @@ function showScene4() {
       .attr('font-size', '1.3em')
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
-      .text('Warriors & Rockets vs. League: 3PA and 3P% (2015–2020)');
+      .text('Warriors & Rockets Revolutionizing 3-Point Shooting (2015-2020)');
   });
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('From 2015–2020, the Warriors and Rockets led the 3-point revolution. The Warriors won championships with their "Splash Brothers" backcourt, while the Rockets pioneered "Moreyball" with high-volume 3-point shooting. Both teams consistently shot more threes than the league average. Hover over points for details.');
+    .html('From 2015-2020, the Warriors and Rockets led the 3-point revolution. The Warriors won championships with their "Splash Brothers" backcourt, led by Stephen Curry and Klay Thompson, while the Rockets pioneered "Moreyball" with high-volume 3-point shooting, led by James Harden. The Rockets consistently shot more threes than the league average, scoring many of their points from the 3-point line, while the Warriors roster was built around 3-point shooting, leading to high efficiency (%). These two teams truly set the pace for the 3-point revolution, and inspired players around the league to focus on improving their 3-point shooting.');
 }
 function showScene5() {
   const plotWidth = 760;
@@ -1449,12 +1455,12 @@ function showScene5() {
       .attr('font-size', '1.3em')
       .attr('font-weight', 'bold')
       .attr('fill', '#222')
-      .text('NBA 3-Point Boom: 2020–Present (vs. 2000-2004 Reference)');
+      .text('NBA 3-Point Boom: 2020-Present (vs. 2000-2004 Reference)');
   });
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('This chart shows the 3-point boom from 2020-2024 with horizontal reference lines showing the average values from 2000-2004. The dramatic increase in 3PA and decrease in 2PA demonstrates how the game has fundamentally changed. Hover over points to see current values compared to the 2000-2004 averages.');
+    .html("In today's NBA, players are shooting more threes than ever before. The post-up big man role has now been eliminated to favor big men who are able to stretch the floor and shoot threes. As we can see in the chart, when we compare the averages from 2000-2004 to 2020-2024, we see a dramatic increase in 3-point attempts and a dramatic decrease in 2-point attempts. Three-point shooting is more important than ever today, and some have even proposed adding a 4-point line to the game, due to how talented the players have become at shooting threes.");
 }
 function showScene6() {
   const margin = {top: 20, right: 20, bottom: 120, left: 60};
@@ -1478,7 +1484,7 @@ function showScene6() {
     .style('border', '1px solid #dee2e6');
 
   panel1.append('h3')
-    .text('Top 10 3PT Shooters')
+    .text('Top 10 3-Point Shooters Per Year')
     .style('margin', '0 0 15px 0')
     .style('color', '#333')
     .style('font-size', '1.2em');
@@ -1492,7 +1498,7 @@ function showScene6() {
     .style('border', '1px solid #dee2e6');
 
   panel2.append('h3')
-    .text('Top 3PT Shooting Teams (2020-Present)')
+    .text('Top 3-Point Shooting Teams (2020-Present)')
     .style('margin', '0 0 15px 0')
     .style('color', '#333')
     .style('font-size', '1.2em');
@@ -1653,7 +1659,7 @@ function showScene6() {
       .style('border', '1px solid #dee2e6');
 
     panel3.append('h3')
-      .text('Team 3PT Performance by Year')
+      .text('Team 3-Point Performance by Year')
       .style('margin', '0 0 15px 0')
       .style('color', '#333')
       .style('font-size', '1.2em');
@@ -2078,6 +2084,12 @@ function showScene6() {
         .html(`<strong>Season:</strong> ${player.Season}`)
         .style('margin', '10px 0');
 
+      modalContent.append('h3')
+        .text('3-Point Shooting')
+        .style('margin', '20px 0 10px 0')
+        .style('color', '#1976d2')
+        .style('font-size', '1.1em');
+
       modalContent.append('p')
         .html(`<strong>3PA per Game:</strong> ${player['3PA'].toFixed(1)}`)
         .style('margin', '10px 0');
@@ -2090,6 +2102,43 @@ function showScene6() {
         .html(`<strong>3PM per Game:</strong> ${player['3PM'] ? player['3PM'].toFixed(1) : 'N/A'}`)
         .style('margin', '10px 0');
 
+      modalContent.append('h3')
+        .text('Per-Game Statistics')
+        .style('margin', '20px 0 10px 0')
+        .style('color', '#1976d2')
+        .style('font-size', '1.1em');
+
+      if (player.pts_per_game) {
+        modalContent.append('p')
+          .html(`<strong>Points per Game:</strong> ${(+player.pts_per_game).toFixed(1)}`)
+          .style('margin', '10px 0');
+      }
+
+      if (player.trb_per_game) {
+        modalContent.append('p')
+          .html(`<strong>Rebounds per Game:</strong> ${(+player.trb_per_game).toFixed(1)}`)
+          .style('margin', '10px 0');
+      }
+
+      if (player.ast_per_game) {
+        modalContent.append('p')
+          .html(`<strong>Assists per Game:</strong> ${(+player.ast_per_game).toFixed(1)}`)
+          .style('margin', '10px 0');
+      }
+
+      if (player.stl_per_game) {
+        modalContent.append('p')
+          .html(`<strong>Steals per Game:</strong> ${(+player.stl_per_game).toFixed(1)}`)
+          .style('margin', '10px 0');
+      }
+
+      if (player.blk_per_game) {
+        modalContent.append('p')
+          .html(`<strong>Blocks per Game:</strong> ${(+player.blk_per_game).toFixed(1)}`)
+          .style('margin', '10px 0');
+      }
+
+      // Additional Info
       if (player.G) {
         modalContent.append('p')
           .html(`<strong>Games Played:</strong> ${player.G}`)
@@ -2121,7 +2170,7 @@ function showScene6() {
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('Explore the data! Use the year selectors to see different seasons. Click on players in the top 10 list to see detailed stats. The interactive dashboard shows real player and team data from your CSV files. Discover who the top 3-point shooters were in different years and how teams ranked in 3-point shooting.');
+    .html('Explore the data! These graphs are focused on the three point shooting in thepresent day NBA. Feel free to browse and filter the data to your liking. Click on the players to view more detailed stats.');
 }
 
 renderScene(); 
