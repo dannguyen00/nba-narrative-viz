@@ -2170,7 +2170,7 @@ function showScene6() {
 
   d3.select('#annotation').append('div')
     .attr('class', 'annotation')
-    .html('Explore the data! These graphs are focused on the three point shooting in thepresent day NBA. Feel free to browse and filter the data to your liking. Click on the players to view more detailed stats.');
+    .html('Explore the data! These graphs are focused on the three point shooting in the present day NBA. Feel free to browse and filter the data to your liking. Click on the players to view more detailed stats.');
 }
 
 renderScene(); 
